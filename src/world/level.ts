@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Physics } from '../physics/world';
 import type { AssetRegistry, ResolvedAsset } from './registry';
-import type { Level, Placement } from './types';
+import type { AssetColliderOverride, ColliderParams, ColliderShape, Level, Placement } from './types';
 
 export interface RenderedPlacement {
   placement: Placement;
@@ -27,10 +27,49 @@ export class LevelHandle {
       console.warn(`[level] missing asset: ${p.id}`);
       return null;
     }
-    const r = build(this.scene, this.physics, asset, p);
+    const override = this.level.assetOverrides?.[p.id];
+    const r = build(this.scene, this.physics, asset, p, override);
     this.rendered.set(p.uid, r);
     if (!this.level.placements.includes(p)) this.level.placements.push(p);
     return r;
+  }
+
+  /** Look up the effective override for a given asset id (for the inspector). */
+  getAssetOverride(id: string): AssetColliderOverride | undefined {
+    return this.level.assetOverrides?.[id];
+  }
+
+  /** Set / clear collider type for an asset. Rebuilds every placement using it. */
+  setAssetCollider(id: string, shape: ColliderShape | null): void {
+    this.mutateOverride(id, (o) => {
+      if (shape === null) delete o.collider;
+      else o.collider = shape;
+    });
+    this.rebuildAssetPlacements(id);
+  }
+
+  /** Set / clear collider params for an asset. Rebuilds every placement using it. */
+  setAssetColliderParams(id: string, params: ColliderParams | null): void {
+    this.mutateOverride(id, (o) => {
+      if (params === null) delete o.params;
+      else o.params = params;
+    });
+    this.rebuildAssetPlacements(id);
+  }
+
+  private mutateOverride(id: string, fn: (o: AssetColliderOverride) => void): void {
+    if (!this.level.assetOverrides) this.level.assetOverrides = {};
+    const cur = this.level.assetOverrides[id] ?? {};
+    fn(cur);
+    if (!cur.collider && !cur.params) delete this.level.assetOverrides[id];
+    else this.level.assetOverrides[id] = cur;
+  }
+
+  /** Re-create every placement that uses asset id (called after override change). */
+  private rebuildAssetPlacements(id: string): void {
+    for (const r of this.rendered.values()) {
+      if (r.placement.id === id) this.updateTransform(r.placement.uid);
+    }
   }
 
   removePlacement(uid: string): void {
@@ -68,7 +107,8 @@ export class LevelHandle {
     // recreate physics body to reflect new scale/pos/rot
     this.physics.world.removeRigidBody(r.body);
     const asset = this.registry.get(p.id)!;
-    const { body, collider } = createBody(this.physics, asset, p);
+    const override = this.level.assetOverrides?.[p.id];
+    const { body, collider } = createBody(this.physics, asset, p, override);
     r.body = body;
     r.collider = collider;
   }
@@ -95,6 +135,7 @@ function build(
   physics: Physics,
   asset: ResolvedAsset,
   p: Placement,
+  override: AssetColliderOverride | undefined,
 ): RenderedPlacement {
   const group = new THREE.Group();
   group.userData.uid = p.uid;
@@ -104,7 +145,7 @@ function build(
   group.scale.set(p.scale[0], p.scale[1], p.scale[2]);
   scene.add(group);
 
-  const { body, collider } = createBody(physics, asset, p);
+  const { body, collider } = createBody(physics, asset, p, override);
   return { placement: p, group, body, collider };
 }
 
@@ -112,6 +153,7 @@ function createBody(
   physics: Physics,
   asset: ResolvedAsset,
   p: Placement,
+  override: AssetColliderOverride | undefined,
 ): { body: RAPIER.RigidBody; collider: RAPIER.Collider } {
   const bodyDesc = RAPIER.RigidBodyDesc.fixed()
     .setTranslation(p.pos[0], p.pos[1], p.pos[2])
@@ -122,23 +164,23 @@ function createBody(
   if (asset.def.kind === 'primitive' && asset.def.shape === 'box') {
     colDesc = RAPIER.ColliderDesc.cuboid(p.scale[0] / 2, p.scale[1] / 2, p.scale[2] / 2);
   } else if (asset.def.kind === 'gltf') {
-    const colliderType = p.collider ?? asset.def.collider;
-    const params = p.colliderParams ?? {};
+    const colliderType = override?.collider ?? asset.def.collider;
+    const params = override?.params ?? {};
     const bboxSize = new THREE.Vector3();
     asset.bbox.getSize(bboxSize);
     const bboxCenter = new THREE.Vector3();
     asset.bbox.getCenter(bboxCenter);
-    const wx = Math.max(0.01, params.size?.[0] ?? bboxSize.x * p.scale[0]);
-    const wy = Math.max(0.01, params.size?.[1] ?? bboxSize.y * p.scale[1]);
-    const wz = Math.max(0.01, params.size?.[2] ?? bboxSize.z * p.scale[2]);
+    // Override values are stored in unit-asset space; placement.scale is applied here
+    // so each instance scales the asset-shared collider.
+    const wx = Math.max(0.01, (params.size?.[0] ?? bboxSize.x) * p.scale[0]);
+    const wy = Math.max(0.01, (params.size?.[1] ?? bboxSize.y) * p.scale[1]);
+    const wz = Math.max(0.01, (params.size?.[2] ?? bboxSize.z) * p.scale[2]);
     const offset = {
-      x: params.offset?.[0] ?? bboxCenter.x * p.scale[0],
-      y: params.offset?.[1] ?? bboxCenter.y * p.scale[1],
-      z: params.offset?.[2] ?? bboxCenter.z * p.scale[2],
+      x: (params.offset?.[0] ?? bboxCenter.x) * p.scale[0],
+      y: (params.offset?.[1] ?? bboxCenter.y) * p.scale[1],
+      z: (params.offset?.[2] ?? bboxCenter.z) * p.scale[2],
     };
-    const localRot = params.rot
-      ? quatFromEuler(params.rot)
-      : null;
+    const localRot = params.rot ? quatFromEuler(params.rot) : null;
     switch (colliderType) {
       case 'box':
         colDesc = RAPIER.ColliderDesc.cuboid(wx / 2, wy / 2, wz / 2);

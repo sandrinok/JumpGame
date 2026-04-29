@@ -1,7 +1,7 @@
 import type { ResolvedAsset } from '../../world/registry';
 import type { RenderedPlacement } from '../../world/level';
 import type { DebugMode } from '../../physics/debugView';
-import type { Placement } from '../../world/types';
+import type { AssetColliderOverride, Placement } from '../../world/types';
 
 /**
  * Editor UI state shared between the (TS) Editor controller and the (React)
@@ -29,6 +29,8 @@ export interface EditorUiState {
   placementsVersion: number;
   /** snapshot of all level placements for the outliner */
   placements: Placement[];
+  /** snapshot of asset-level collider overrides */
+  assetOverrides: Record<string, AssetColliderOverride>;
   /** uid of placement we are in edit-collider focus mode on, null = normal editor */
   colliderFocusUid: string | null;
   paletteVisible: boolean;
@@ -51,6 +53,7 @@ const initial: EditorUiState = {
   locked: new Set(),
   placementsVersion: 0,
   placements: [],
+  assetOverrides: {},
   colliderFocusUid: null,
   paletteVisible: true,
   outlinerCollapsed: false,

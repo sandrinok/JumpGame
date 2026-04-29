@@ -317,9 +317,10 @@ export class Editor {
     if (focus) {
       const r = this.levelHandle.rendered.get(focus);
       if (!r) return;
+      const cur = this.levelHandle.getAssetOverride(r.placement.id)?.params;
       this.dragStartParams = {
         uid: focus,
-        params: r.placement.colliderParams ? cloneParams(r.placement.colliderParams) : undefined,
+        params: cur ? cloneParams(cur) : undefined,
       };
       return;
     }
@@ -339,19 +340,17 @@ export class Editor {
       this.dragStartParams = null;
       const r = this.levelHandle.rendered.get(start.uid);
       if (!r) return;
-      const after = r.placement.colliderParams ? cloneParams(r.placement.colliderParams) : undefined;
+      const id = r.placement.id;
+      const afterShared = this.levelHandle.getAssetOverride(id)?.params;
+      const after = afterShared ? cloneParams(afterShared) : undefined;
       const before = start.params;
       const apply = (params: ColliderParams | undefined): void => {
-        const live = this.levelHandle.rendered.get(start.uid);
-        if (!live) return;
-        if (params === undefined) delete live.placement.colliderParams;
-        else live.placement.colliderParams = cloneParams(params);
-        this.levelHandle.updateTransform(start.uid);
+        this.levelHandle.setAssetColliderParams(id, params ? cloneParams(params) : null);
         if (uiStore.get().colliderFocusUid === start.uid) this.syncProxyFromPlacement(start.uid);
         uiStore.bumpSelection();
       };
       this.history.record({
-        label: 'collider gizmo',
+        label: 'asset collider gizmo',
         do: () => apply(after),
         undo: () => apply(before),
       });
@@ -451,9 +450,12 @@ export class Editor {
     uiStore.set({ assets: this.registry.all() });
   }
 
-  /** Update uiStore with a fresh placements snapshot for the outliner. */
+  /** Update uiStore with a fresh placements + assetOverrides snapshot. */
   publishPlacements(): void {
-    uiStore.set({ placements: [...this.levelHandle.level.placements] });
+    uiStore.set({
+      placements: [...this.levelHandle.level.placements],
+      assetOverrides: { ...(this.levelHandle.level.assetOverrides ?? {}) },
+    });
   }
 
   /** Read-only snapshot of action handlers for the React UI. */
@@ -523,57 +525,47 @@ export class Editor {
     });
   }
 
-  /** Change the collider transform overrides for the selected placement. null clears all overrides. */
+  /** Change collider transform overrides for the selected placement's asset (applies to all instances). */
   changeSelectedColliderParams(next: ColliderParams | null): void {
     if (!this.selected) return;
-    const uid = this.selected.placement.uid;
-    const before = this.selected.placement.colliderParams;
+    const id = this.selected.placement.id;
+    const before = this.levelHandle.getAssetOverride(id)?.params;
     if (sameParams(before, next ?? undefined)) return;
 
-    const apply = (params: ColliderParams | null): void => {
-      const r = this.levelHandle.rendered.get(uid);
-      if (!r) return;
-      if (params === null) delete r.placement.colliderParams;
-      else r.placement.colliderParams = params;
-      this.levelHandle.updateTransform(uid);
-      if (this.selected?.placement.uid === uid) {
-        uiStore.bumpSelection();
-      }
-    };
-
-    // For continuous edits we do not want a history entry per keystroke.
-    // Skip undo recording when only minor numeric changes; for now do record
-    // the snapshot as a single command (debounced caller is responsible for
-    // coalescing if needed).
     this.history.exec({
-      label: 'collider params',
-      do: () => apply(next),
-      undo: () => apply(before ?? null),
+      label: 'asset collider params',
+      do: () => {
+        this.levelHandle.setAssetColliderParams(id, next);
+        this.publishPlacements();
+        uiStore.bumpSelection();
+      },
+      undo: () => {
+        this.levelHandle.setAssetColliderParams(id, before ?? null);
+        this.publishPlacements();
+        uiStore.bumpSelection();
+      },
     });
   }
 
-  /** Change the collider for the selected placement (null = use asset default). */
+  /** Change collider type for the selected placement's asset (applies to all instances). */
   changeSelectedCollider(shape: ColliderShape | null): void {
     if (!this.selected) return;
-    const uid = this.selected.placement.uid;
-    const before = this.selected.placement.collider;
+    const id = this.selected.placement.id;
+    const before = this.levelHandle.getAssetOverride(id)?.collider;
     if (before === shape || (before === undefined && shape === null)) return;
 
-    const apply = (next: ColliderShape | null): void => {
-      const r = this.levelHandle.rendered.get(uid);
-      if (!r) return;
-      if (next === null) delete r.placement.collider;
-      else r.placement.collider = next;
-      this.levelHandle.updateTransform(uid);
-      if (this.selected?.placement.uid === uid) {
-        uiStore.bumpSelection();
-      }
-    };
-
     this.history.exec({
-      label: 'collider',
-      do: () => apply(shape),
-      undo: () => apply(before ?? null),
+      label: 'asset collider',
+      do: () => {
+        this.levelHandle.setAssetCollider(id, shape);
+        this.publishPlacements();
+        uiStore.bumpSelection();
+      },
+      undo: () => {
+        this.levelHandle.setAssetCollider(id, before ?? null);
+        this.publishPlacements();
+        uiStore.bumpSelection();
+      },
     });
   }
 
@@ -714,7 +706,9 @@ export class Editor {
     }
   }
 
-  /** Position the proxy so it represents the current effective collider transform. */
+  /** Position the proxy so it represents the current effective collider transform.
+   *  Asset-level params are stored in unit-asset space; we multiply by placement.scale
+   *  to get world dimensions for the gizmo target. */
   private syncProxyFromPlacement(uid: string): void {
     if (!this.colliderProxy) return;
     const r = this.levelHandle.rendered.get(uid);
@@ -723,7 +717,7 @@ export class Editor {
     if (!asset) return;
 
     const p = r.placement;
-    const params = p.colliderParams ?? {};
+    const params = this.levelHandle.getAssetOverride(p.id)?.params ?? {};
 
     const bboxSize = new THREE.Vector3();
     const bboxCenter = new THREE.Vector3();
@@ -735,33 +729,37 @@ export class Editor {
       bboxCenter.set(0, 0, 0);
     }
 
-    const offset = new THREE.Vector3(
-      params.offset?.[0] ?? bboxCenter.x * p.scale[0],
-      params.offset?.[1] ?? bboxCenter.y * p.scale[1],
-      params.offset?.[2] ?? bboxCenter.z * p.scale[2],
+    const offsetU = new THREE.Vector3(
+      params.offset?.[0] ?? bboxCenter.x,
+      params.offset?.[1] ?? bboxCenter.y,
+      params.offset?.[2] ?? bboxCenter.z,
     );
-    const size = new THREE.Vector3(
-      params.size?.[0] ?? bboxSize.x * p.scale[0],
-      params.size?.[1] ?? bboxSize.y * p.scale[1],
-      params.size?.[2] ?? bboxSize.z * p.scale[2],
+    const sizeU = new THREE.Vector3(
+      params.size?.[0] ?? bboxSize.x,
+      params.size?.[1] ?? bboxSize.y,
+      params.size?.[2] ?? bboxSize.z,
     );
+    const offsetW = new THREE.Vector3(offsetU.x * p.scale[0], offsetU.y * p.scale[1], offsetU.z * p.scale[2]);
+    const sizeW = new THREE.Vector3(sizeU.x * p.scale[0], sizeU.y * p.scale[1], sizeU.z * p.scale[2]);
+
     const localQ = params.rot
       ? new THREE.Quaternion().setFromEuler(new THREE.Euler(params.rot[0], params.rot[1], params.rot[2], 'XYZ'))
       : new THREE.Quaternion();
 
     const placeQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.rot[0], p.rot[1], p.rot[2], 'XYZ'));
 
-    // World position = placement.pos + placementRotation * offset
-    const worldPos = offset.clone().applyQuaternion(placeQ).add(new THREE.Vector3(p.pos[0], p.pos[1], p.pos[2]));
+    const worldPos = offsetW.clone().applyQuaternion(placeQ).add(new THREE.Vector3(p.pos[0], p.pos[1], p.pos[2]));
     const worldQuat = placeQ.clone().multiply(localQ);
 
     this.colliderProxy.position.copy(worldPos);
     this.colliderProxy.quaternion.copy(worldQuat);
-    this.colliderProxy.scale.copy(size);
+    this.colliderProxy.scale.copy(sizeW);
     this.colliderProxy.updateMatrixWorld(true);
   }
 
-  /** Read the proxy and write computed colliderParams onto the placement. */
+  /** Read the proxy and write computed asset-level colliderParams.
+   *  We DIVIDE by placement.scale so values are stored in unit-asset space and
+   *  apply correctly to instances at any scale. */
   private writeProxyToColliderParams(uid: string): void {
     if (!this.colliderProxy) return;
     const r = this.levelHandle.rendered.get(uid);
@@ -770,23 +768,22 @@ export class Editor {
     const placeQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.rot[0], p.rot[1], p.rot[2], 'XYZ'));
     const placeQinv = placeQ.clone().invert();
 
-    // offset (placement-local)
     const worldOffset = this.colliderProxy.position.clone().sub(new THREE.Vector3(p.pos[0], p.pos[1], p.pos[2]));
-    const localOffset = worldOffset.applyQuaternion(placeQinv);
+    const localOffsetW = worldOffset.applyQuaternion(placeQinv);
 
-    // local rotation
     const localQ = placeQinv.clone().multiply(this.colliderProxy.quaternion);
     const e = new THREE.Euler().setFromQuaternion(localQ, 'XYZ');
 
-    // size = proxy scale (already world dimensions)
     const sz = this.colliderProxy.scale;
 
-    p.colliderParams = {
-      offset: [localOffset.x, localOffset.y, localOffset.z],
-      size: [sz.x, sz.y, sz.z],
+    const safeScale = (s: number): number => (Math.abs(s) < 1e-6 ? 1 : s);
+    const params: ColliderParams = {
+      offset: [localOffsetW.x / safeScale(p.scale[0]), localOffsetW.y / safeScale(p.scale[1]), localOffsetW.z / safeScale(p.scale[2])],
+      size: [sz.x / safeScale(p.scale[0]), sz.y / safeScale(p.scale[1]), sz.z / safeScale(p.scale[2])],
       rot: [e.x, e.y, e.z],
     };
-    this.levelHandle.updateTransform(uid);
+    this.levelHandle.setAssetColliderParams(p.id, params);
+    this.publishPlacements();
     uiStore.bumpSelection();
   }
 

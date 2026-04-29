@@ -9,14 +9,10 @@ export interface Placement {
   /** Euler XYZ in radians */
   rot: Vec3;
   scale: Vec3;
-  /** optional per-placement collider override (gltf assets only) */
-  collider?: ColliderShape;
-  /** optional per-placement collider transform overrides */
-  colliderParams?: ColliderParams;
 }
 
 export interface ColliderParams {
-  /** override the auto-derived size (world units, before placement scale) */
+  /** override the auto-derived size (world units) */
   size?: Vec3;
   /** local offset relative to placement origin */
   offset?: Vec3;
@@ -24,10 +20,18 @@ export interface ColliderParams {
   rot?: Vec3;
 }
 
+/** Per-asset collider configuration that applies to every placement of that asset. */
+export interface AssetColliderOverride {
+  collider?: ColliderShape;
+  params?: ColliderParams;
+}
+
 export interface Level {
   spawn: { pos: Vec3; yaw: number };
   killY: number;
   placements: Placement[];
+  /** Editor-authored collider overrides keyed by asset id; applies to all instances. */
+  assetOverrides?: Record<string, AssetColliderOverride>;
 }
 
 export type ColliderShape =

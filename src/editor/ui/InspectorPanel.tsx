@@ -16,7 +16,7 @@ const COLLIDER_OPTIONS: Array<{ value: ColliderShape; label: string; hint: strin
 ];
 
 export function InspectorPanel(): JSX.Element {
-  const { selection, selectionAsset, colliderFocusUid } = useEditorUi();
+  const { selection, selectionAsset, colliderFocusUid, assetOverrides, placements } = useEditorUi();
   const actions = useEditorActions();
 
   if (!selection || !selectionAsset) {
@@ -32,9 +32,11 @@ export function InspectorPanel(): JSX.Element {
   const p = selection.placement;
   const def = selectionAsset.def;
   const isPrimitive = def.kind === 'primitive';
+  const override = assetOverrides[p.id];
   const defaultCollider = !isPrimitive ? def.collider : null;
-  const active = p.collider ?? defaultCollider;
-  const params = p.colliderParams ?? {};
+  const active = override?.collider ?? defaultCollider;
+  const params = override?.params ?? {};
+  const sharedCount = placements.reduce((n, pp) => (pp.id === p.id ? n + 1 : n), 0);
 
   return (
     <Card className="w-[300px] max-h-[45vh] overflow-y-auto shrink-0">
@@ -69,7 +71,9 @@ export function InspectorPanel(): JSX.Element {
         {!isPrimitive ? (
           <>
             <div>
-              <SectionLabel>Collider</SectionLabel>
+              <SectionLabel>
+                Collider · shared by {sharedCount} instance{sharedCount === 1 ? '' : 's'}
+              </SectionLabel>
               <div className="grid grid-cols-4 gap-1">
                 {COLLIDER_OPTIONS.map((opt) => (
                   <Button
@@ -83,35 +87,35 @@ export function InspectorPanel(): JSX.Element {
                   </Button>
                 ))}
               </div>
-              {p.collider !== undefined && p.collider !== defaultCollider && (
+              {override?.collider !== undefined && override.collider !== defaultCollider && (
                 <Button
                   size="xs"
                   variant="outline"
                   className="w-full mt-1.5"
                   onClick={() => actions.changeCollider(null)}
                 >
-                  Use asset default ({defaultCollider})
+                  Reset to manifest default ({defaultCollider})
                 </Button>
               )}
             </div>
 
             <div>
-              <SectionLabel>Collider overrides (absolute)</SectionLabel>
+              <SectionLabel>Collider overrides (unit-asset space)</SectionLabel>
               <div className="flex flex-col gap-1.5">
                 <Vec3Input
                   label="Offset"
                   value={params.offset}
-                  onChange={(v) => updateParams({ ...params, offset: v }, actions, p.colliderParams)}
+                  onChange={(v) => updateParams({ ...params, offset: v }, actions, override?.params)}
                 />
                 <Vec3Input
                   label="Size"
                   value={params.size}
-                  onChange={(v) => updateParams({ ...params, size: v }, actions, p.colliderParams)}
+                  onChange={(v) => updateParams({ ...params, size: v }, actions, override?.params)}
                 />
                 <Vec3Input
                   label="Rot°"
                   value={params.rot ? toDeg(params.rot) : undefined}
-                  onChange={(v) => updateParams({ ...params, rot: v ? toRad(v) : undefined }, actions, p.colliderParams)}
+                  onChange={(v) => updateParams({ ...params, rot: v ? toRad(v) : undefined }, actions, override?.params)}
                 />
               </div>
               {(params.offset || params.size || params.rot) && (
