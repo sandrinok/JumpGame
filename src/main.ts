@@ -13,6 +13,7 @@ import { loadScore, saveScore } from './persistence/score';
 import { Editor } from './editor/editor';
 import { createPalette } from './editor/palette';
 import { createStartScreen } from './ui/startScreen';
+import { playWindBurst, unlockAudio } from './audio/sfx';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app not found');
@@ -58,6 +59,7 @@ editor.onModeChange = (mode) => {
 const startScreen = createStartScreen(container, score);
 startScreen.onPlay = () => {
   running = true;
+  unlockAudio();
   input.lockOnClick = editor.mode === 'play';
   hud.setBest(score.name, score.best);
   respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
@@ -91,6 +93,7 @@ startLoop(
           runMaxHeight = 0;
           respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
           hud.flashRespawn();
+          playWindBurst();
         }
       }
     } else {

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { CharacterBody } from '../physics/character';
 import type { Input } from '../core/input';
 import { loadCharacterRig, pickState, setState, type CharacterRig } from './character/rig';
+import { playJump, playLand } from '../audio/sfx';
 
 const WALK_SPEED = 5;
 const RUN_SPEED = 9;
@@ -132,6 +133,7 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
     player.jumping = true;
     player.coyote = 0;
     player.jumpBuffer = 0;
+    playJump();
   }
 
   if (player.jumping && !input.isDown('Space') && player.velocity.y > JUMP_CUT_VELOCITY) {
@@ -153,7 +155,12 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
     y: t.y + corrected.y,
     z: t.z + corrected.z,
   });
+  const wasGrounded = player.grounded;
   player.grounded = body.controller.computedGrounded();
+  if (player.grounded && !wasGrounded) {
+    const impact = Math.min(2, Math.abs(player.velocity.y) / 8);
+    if (impact > 0.2) playLand(impact);
+  }
 
   // visual sync
   player.visualRoot.position.set(t.x + corrected.x, t.y + corrected.y, t.z + corrected.z);
