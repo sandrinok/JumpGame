@@ -15,13 +15,13 @@ const COLLIDER_OPTIONS: Array<{ value: ColliderShape; label: string; hint: strin
   { value: 'trimesh', label: 'Tri', hint: 'Exact · slowest, only for static' },
 ];
 
-export function InspectorPanel(): JSX.Element | null {
+export function InspectorPanel(): JSX.Element {
   const { selection, selectionAsset } = useEditorUi();
   const actions = useEditorActions();
 
   if (!selection || !selectionAsset) {
     return (
-      <Card className="absolute bottom-3 right-3 w-[280px]">
+      <Card className="w-[300px]">
         <CardHeader>
           <CardTitle className="text-muted-foreground italic">No selection</CardTitle>
         </CardHeader>
@@ -37,22 +37,39 @@ export function InspectorPanel(): JSX.Element | null {
   const params = p.colliderParams ?? {};
 
   return (
-    <Card className="absolute bottom-3 right-3 w-[280px] max-h-[80vh] overflow-y-auto">
-      <CardHeader>
-        <CardTitle>{p.id}</CardTitle>
+    <Card className="w-[300px] max-h-[45vh] overflow-y-auto shrink-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-baseline justify-between gap-2">
+          <span className="truncate">{p.id}</span>
+          <span className="text-[10px] font-normal text-muted-foreground font-mono shrink-0 truncate">{p.uid}</span>
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <div className="text-[10px] leading-relaxed text-muted-foreground space-y-0.5">
-          <div className="break-all">uid: {p.uid}</div>
-          <div>pos: {fmt(p.pos)}</div>
-          <div>rot°: {fmt(toDeg(p.rot))}</div>
-          <div>scale: {fmt(p.scale)}</div>
+        <div>
+          <SectionLabel>Transform</SectionLabel>
+          <div className="flex flex-col gap-1.5">
+            <Vec3Input
+              label="Pos"
+              value={p.pos}
+              onChange={(v) => v && actions.changeTransform(v, undefined, undefined)}
+            />
+            <Vec3Input
+              label="Rot°"
+              value={toDeg(p.rot)}
+              onChange={(v) => v && actions.changeTransform(undefined, toRad(v), undefined)}
+            />
+            <Vec3Input
+              label="Scale"
+              value={p.scale}
+              onChange={(v) => v && actions.changeTransform(undefined, undefined, v)}
+            />
+          </div>
         </div>
 
         {!isPrimitive ? (
           <>
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Collider</div>
+              <SectionLabel>Collider</SectionLabel>
               <div className="grid grid-cols-4 gap-1">
                 {COLLIDER_OPTIONS.map((opt) => (
                   <Button
@@ -79,9 +96,7 @@ export function InspectorPanel(): JSX.Element | null {
             </div>
 
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                Collider overrides (absolute)
-              </div>
+              <SectionLabel>Collider overrides (absolute)</SectionLabel>
               <div className="flex flex-col gap-1.5">
                 <Vec3Input
                   label="Offset"
@@ -119,12 +134,15 @@ export function InspectorPanel(): JSX.Element | null {
   );
 }
 
+function SectionLabel({ children }: { children: React.ReactNode }): JSX.Element {
+  return <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">{children}</div>;
+}
+
 function updateParams(
   next: { offset?: Vec3; size?: Vec3; rot?: Vec3 },
   actions: ReturnType<typeof useEditorActions>,
   prev: { offset?: Vec3; size?: Vec3; rot?: Vec3 } | undefined,
 ): void {
-  // strip undefined keys
   const cleaned: typeof next = {};
   if (next.offset) cleaned.offset = next.offset;
   if (next.size) cleaned.size = next.size;
@@ -132,10 +150,6 @@ function updateParams(
   const empty = Object.keys(cleaned).length === 0;
   if (empty && !prev) return;
   actions.changeColliderParams(empty ? null : cleaned);
-}
-
-function fmt(v: [number, number, number]): string {
-  return `${v[0].toFixed(2)}, ${v[1].toFixed(2)}, ${v[2].toFixed(2)}`;
 }
 
 function toDeg(v: Vec3): Vec3 {

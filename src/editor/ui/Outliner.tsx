@@ -35,7 +35,7 @@ export function Outliner(): JSX.Element {
   const selectedUid = selection?.placement.uid ?? null;
 
   return (
-    <Card className="absolute top-16 right-3 w-[300px] max-h-[55vh] flex flex-col">
+    <Card className="w-[300px] flex-1 min-h-0 flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between">
           <span>Outliner</span>

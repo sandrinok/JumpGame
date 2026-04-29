@@ -366,6 +366,7 @@ export class Editor {
     return {
       selectPaletteId: (id) => uiStore.set({ paletteCurrent: id }),
       placeAtCursor: (id) => this.placeAtCursor(id),
+      changeTransform: (pos, rot, scale) => this.changeSelectedTransform(pos, rot, scale),
       changeCollider: (shape) => this.changeSelectedCollider(shape),
       changeColliderParams: (params) => this.changeSelectedColliderParams(params),
       newLevel: () => this.newLevel(),
@@ -384,6 +385,43 @@ export class Editor {
       toggleHidden: (uid) => this.toggleHidden(uid),
       toggleLocked: (uid) => this.toggleLocked(uid),
     };
+  }
+
+  /** Apply absolute transform values to the selected placement (any subset). */
+  changeSelectedTransform(pos?: Vec3, rot?: Vec3, scale?: Vec3): void {
+    if (!this.selected) return;
+    const uid = this.selected.placement.uid;
+    const before: { pos: Vec3; rot: Vec3; scale: Vec3 } = {
+      pos: [...this.selected.placement.pos] as Vec3,
+      rot: [...this.selected.placement.rot] as Vec3,
+      scale: [...this.selected.placement.scale] as Vec3,
+    };
+    const after: { pos: Vec3; rot: Vec3; scale: Vec3 } = {
+      pos: pos ?? before.pos,
+      rot: rot ?? before.rot,
+      scale: scale ?? before.scale,
+    };
+    if (vec3Eq(before.pos, after.pos) && vec3Eq(before.rot, after.rot) && vec3Eq(before.scale, after.scale)) return;
+
+    const apply = (t: { pos: Vec3; rot: Vec3; scale: Vec3 }): void => {
+      const r = this.levelHandle.rendered.get(uid);
+      if (!r) return;
+      r.placement.pos = [...t.pos] as Vec3;
+      r.placement.rot = [...t.rot] as Vec3;
+      r.placement.scale = [...t.scale] as Vec3;
+      this.levelHandle.updateTransform(uid);
+      if (this.selected?.placement.uid === uid) {
+        // re-attach gizmo to refresh its position
+        this.gizmo.attach(r.group);
+        uiStore.bumpSelection();
+      }
+    };
+
+    this.history.exec({
+      label: 'transform (numeric)',
+      do: () => apply(after),
+      undo: () => apply(before),
+    });
   }
 
   /** Change the collider transform overrides for the selected placement. null clears all overrides. */

@@ -17,8 +17,10 @@ export function EditorRoot({ actions }: Props): JSX.Element | null {
       <div className="editor-ui-root">
         <Topbar />
         <PalettePanel />
-        <Outliner />
-        <InspectorPanel />
+        <div className="absolute top-16 bottom-3 right-3 flex flex-col gap-3 max-h-[calc(100vh-80px)]">
+          <Outliner />
+          <InspectorPanel />
+        </div>
       </div>
     </EditorActionsContext.Provider>
   );

@@ -5,6 +5,7 @@ import type { DebugMode } from '../../physics/debugView';
 export interface EditorActions {
   selectPaletteId(id: string | null): void;
   placeAtCursor(id: string): void;
+  changeTransform(pos?: [number, number, number], rot?: [number, number, number], scale?: [number, number, number]): void;
   changeCollider(shape: ColliderShape | null): void;
   changeColliderParams(params: ColliderParams | null): void;
   // file
@@ -31,6 +32,7 @@ export interface EditorActions {
 const noop: EditorActions = {
   selectPaletteId: () => undefined,
   placeAtCursor: () => undefined,
+  changeTransform: () => undefined,
   changeCollider: () => undefined,
   changeColliderParams: () => undefined,
   newLevel: () => undefined,
