@@ -3,9 +3,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { LevelHandle, RenderedPlacement } from '../world/level';
 import type { Palette } from './palette';
-import type { Placement } from '../world/types';
+import type { Placement, Vec3 } from '../world/types';
 import { loadLevelFromDisk, saveLevel, saveLevelAs } from '../persistence/levelFile';
 import type { AssetRegistry } from '../world/registry';
+import { History } from './history';
 
 export type EditorMode = 'play' | 'edit';
 
@@ -14,6 +15,10 @@ function nextUid(): string {
   uidCounter++;
   return `e${Date.now().toString(36)}_${uidCounter}`;
 }
+
+const TRANSLATE_SNAP = 0.5;
+const ROTATE_SNAP_DEG = 15;
+const SCALE_SNAP = 0.1;
 
 export class Editor {
   mode: EditorMode = 'play';
@@ -25,6 +30,11 @@ export class Editor {
   private pointer = new THREE.Vector2();
   private selected: RenderedPlacement | null = null;
   private gizmoMode: 'translate' | 'rotate' | 'scale' = 'translate';
+  private history = new History();
+  private snapEnabled = true;
+  /** snapshot of placement transform when a gizmo drag begins */
+  private dragStart: { uid: string; pos: Vec3; rot: Vec3; scale: Vec3 } | null = null;
+
   palette: Palette | null = null;
   onModeChange: ((mode: EditorMode) => void) | null = null;
 
@@ -44,8 +54,11 @@ export class Editor {
     this.orbit.enabled = false;
 
     this.gizmo = new TransformControls(this.editorCamera, renderer.domElement);
+    this.applySnap();
     this.gizmo.addEventListener('dragging-changed', (e) => {
       this.orbit.enabled = !e.value && this.mode === 'edit';
+      if (e.value) this.beginGizmoDrag();
+      else this.endGizmoDrag();
     });
     this.gizmo.addEventListener('objectChange', () => this.onGizmoChange());
     const helperFn = (this.gizmo as unknown as { getHelper?: () => THREE.Object3D }).getHelper;
@@ -80,7 +93,6 @@ export class Editor {
       if (document.pointerLockElement) document.exitPointerLock();
     } else {
       if (document.pointerLockElement) document.exitPointerLock();
-      // position editor cam near player on entry
       this.editorCamera.position.copy(this.gameCamera.position);
       this.orbit.target.copy(this.gameCamera.position).add(new THREE.Vector3(0, 0, -5));
       this.orbit.update();
@@ -100,6 +112,18 @@ export class Editor {
     this.editorCamera.updateProjectionMatrix();
   }
 
+  private applySnap(): void {
+    if (this.snapEnabled) {
+      this.gizmo.setTranslationSnap(TRANSLATE_SNAP);
+      this.gizmo.setRotationSnap(THREE.MathUtils.degToRad(ROTATE_SNAP_DEG));
+      this.gizmo.setScaleSnap(SCALE_SNAP);
+    } else {
+      this.gizmo.setTranslationSnap(null);
+      this.gizmo.setRotationSnap(null);
+      this.gizmo.setScaleSnap(null);
+    }
+  }
+
   private onKeyDown(e: KeyboardEvent): void {
     if (e.code === 'F1') {
       this.toggle();
@@ -107,26 +131,49 @@ export class Editor {
       return;
     }
     if (this.mode !== 'edit') return;
-    if (e.code === 'KeyG' || e.code === 'KeyT') this.setGizmoMode('translate');
-    else if (e.code === 'KeyR') this.setGizmoMode('rotate');
-    else if (e.code === 'KeyS' && !e.ctrlKey && !e.metaKey) this.setGizmoMode('scale');
-    else if (e.code === 'Delete' || e.code === 'KeyX') this.deleteSelected();
-    else if (e.code === 'Escape') this.deselect();
-    else if (e.code === 'KeyD' && (e.ctrlKey || e.metaKey)) {
-      this.duplicateSelected();
+
+    const ctrl = e.ctrlKey || e.metaKey;
+
+    if (ctrl && e.code === 'KeyZ') {
       e.preventDefault();
+      if (e.shiftKey) this.history.redo();
+      else this.history.undo();
+      return;
     }
-    else if (e.code === 'KeyS' && (e.ctrlKey || e.metaKey)) {
+    if (ctrl && e.code === 'KeyY') {
+      e.preventDefault();
+      this.history.redo();
+      return;
+    }
+    if (ctrl && e.code === 'KeyD') {
+      e.preventDefault();
+      this.duplicateSelected();
+      return;
+    }
+    if (ctrl && e.code === 'KeyS') {
       e.preventDefault();
       if (e.shiftKey) saveLevelAs(this.levelHandle.level);
       else saveLevel(this.levelHandle.level);
+      return;
     }
-    else if (e.code === 'KeyO' && (e.ctrlKey || e.metaKey)) {
+    if (ctrl && e.code === 'KeyO') {
       e.preventDefault();
       this.openLevel();
+      return;
     }
-    else if ((e.code === 'Enter' || e.code === 'KeyB') && this.palette) {
-      const id = this.palette.current();
+
+    if (e.code === 'KeyG' || e.code === 'KeyT') this.setGizmoMode('translate');
+    else if (e.code === 'KeyR') this.setGizmoMode('rotate');
+    else if (e.code === 'KeyS') this.setGizmoMode('scale');
+    else if (e.code === 'Delete' || e.code === 'KeyX') this.deleteSelected();
+    else if (e.code === 'Escape') this.deselect();
+    else if (e.code === 'KeyN') {
+      this.snapEnabled = !this.snapEnabled;
+      this.applySnap();
+      console.info(`[editor] snap ${this.snapEnabled ? 'on' : 'off'}`);
+    }
+    else if (e.code === 'Enter' || e.code === 'KeyB') {
+      const id = this.palette?.current();
       if (id) this.placeAtCursor(id);
     }
   }
@@ -142,8 +189,140 @@ export class Editor {
       rot: [0, 0, 0],
       scale: [1, 1, 1],
     };
-    const r = this.levelHandle.addPlacement(p);
+    this.execAdd(p);
+  }
+
+  private duplicateSelected(): void {
+    if (!this.selected) return;
+    const src = this.selected.placement;
+    const p: Placement = {
+      id: src.id,
+      uid: nextUid(),
+      pos: [src.pos[0] + 1, src.pos[1], src.pos[2]],
+      rot: [...src.rot] as Vec3,
+      scale: [...src.scale] as Vec3,
+    };
+    this.execAdd(p);
+  }
+
+  private execAdd(p: Placement): void {
+    this.history.exec({
+      label: `add ${p.id}`,
+      do: () => {
+        const r = this.levelHandle.addPlacement(p);
+        if (r) this.select(r);
+      },
+      undo: () => {
+        if (this.selected?.placement.uid === p.uid) this.deselect();
+        this.levelHandle.removePlacement(p.uid);
+      },
+    });
+  }
+
+  private deleteSelected(): void {
+    if (!this.selected) return;
+    const p = this.selected.placement;
+    this.deselect();
+    this.history.exec({
+      label: `delete ${p.id}`,
+      do: () => this.levelHandle.removePlacement(p.uid),
+      undo: () => {
+        const r = this.levelHandle.addPlacement(p);
+        if (r) this.select(r);
+      },
+    });
+  }
+
+  private beginGizmoDrag(): void {
+    if (!this.selected) return;
+    const p = this.selected.placement;
+    this.dragStart = {
+      uid: p.uid,
+      pos: [...p.pos] as Vec3,
+      rot: [...p.rot] as Vec3,
+      scale: [...p.scale] as Vec3,
+    };
+  }
+
+  private endGizmoDrag(): void {
+    if (!this.dragStart || !this.selected) {
+      this.dragStart = null;
+      return;
+    }
+    const p = this.selected.placement;
+    const before = this.dragStart;
+    const after = {
+      pos: [...p.pos] as Vec3,
+      rot: [...p.rot] as Vec3,
+      scale: [...p.scale] as Vec3,
+    };
+    this.dragStart = null;
+
+    if (
+      vec3Eq(before.pos, after.pos) &&
+      vec3Eq(before.rot, after.rot) &&
+      vec3Eq(before.scale, after.scale)
+    ) {
+      return;
+    }
+
+    const uid = before.uid;
+    const apply = (t: { pos: Vec3; rot: Vec3; scale: Vec3 }): void => {
+      const r = this.levelHandle.rendered.get(uid);
+      if (!r) return;
+      r.placement.pos = [...t.pos] as Vec3;
+      r.placement.rot = [...t.rot] as Vec3;
+      r.placement.scale = [...t.scale] as Vec3;
+      this.levelHandle.updateTransform(uid);
+    };
+
+    this.history.record({
+      label: 'transform',
+      do: () => apply(after),
+      undo: () => apply(before),
+    });
+  }
+
+  private onPointerDown(e: PointerEvent): void {
+    if (this.mode !== 'edit') return;
+    if (e.button !== 0) return;
+    if ((this.gizmo as unknown as { dragging: boolean }).dragging) return;
+
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.pointer, this.editorCamera);
+
+    const groups = [...this.levelHandle.rendered.values()].map((r) => r.group);
+    const hits = this.raycaster.intersectObjects(groups, true);
+    if (hits.length === 0) {
+      this.deselect();
+      return;
+    }
+    let obj: THREE.Object3D | null = hits[0].object;
+    while (obj && obj.userData.uid === undefined) obj = obj.parent;
+    if (!obj) return;
+    const uid = obj.userData.uid as string;
+    const r = this.levelHandle.rendered.get(uid);
     if (r) this.select(r);
+  }
+
+  private select(r: RenderedPlacement): void {
+    this.selected = r;
+    this.gizmo.attach(r.group);
+    this.gizmoHelper.visible = true;
+    this.gizmo.setMode(this.gizmoMode);
+  }
+
+  deselect(): void {
+    this.selected = null;
+    this.gizmo.detach();
+    this.gizmoHelper.visible = false;
+  }
+
+  private setGizmoMode(m: 'translate' | 'rotate' | 'scale'): void {
+    this.gizmoMode = m;
+    this.gizmo.setMode(m);
   }
 
   private async onDrop(e: DragEvent): Promise<void> {
@@ -181,72 +360,8 @@ export class Editor {
     const level = await loadLevelFromDisk();
     if (!level) return;
     this.deselect();
+    this.history.clear();
     this.levelHandle.replace(level);
-  }
-
-  private duplicateSelected(): void {
-    if (!this.selected) return;
-    const src = this.selected.placement;
-    const p: Placement = {
-      id: src.id,
-      uid: nextUid(),
-      pos: [src.pos[0] + 1, src.pos[1], src.pos[2]],
-      rot: [...src.rot] as [number, number, number],
-      scale: [...src.scale] as [number, number, number],
-    };
-    const r = this.levelHandle.addPlacement(p);
-    if (r) this.select(r);
-  }
-
-  private setGizmoMode(m: 'translate' | 'rotate' | 'scale'): void {
-    this.gizmoMode = m;
-    this.gizmo.setMode(m);
-  }
-
-  private onPointerDown(e: PointerEvent): void {
-    if (this.mode !== 'edit') return;
-    if (e.button !== 0) return;
-    // ignore clicks on gizmo
-    if ((this.gizmo as unknown as { dragging: boolean }).dragging) return;
-
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    this.raycaster.setFromCamera(this.pointer, this.editorCamera);
-
-    const groups = [...this.levelHandle.rendered.values()].map((r) => r.group);
-    const hits = this.raycaster.intersectObjects(groups, true);
-    if (hits.length === 0) {
-      this.deselect();
-      return;
-    }
-    // walk up to placement group (which has uid)
-    let obj: THREE.Object3D | null = hits[0].object;
-    while (obj && obj.userData.uid === undefined) obj = obj.parent;
-    if (!obj) return;
-    const uid = obj.userData.uid as string;
-    const r = this.levelHandle.rendered.get(uid);
-    if (r) this.select(r);
-  }
-
-  private select(r: RenderedPlacement): void {
-    this.selected = r;
-    this.gizmo.attach(r.group);
-    this.gizmoHelper.visible =true;
-    this.gizmo.setMode(this.gizmoMode);
-  }
-
-  deselect(): void {
-    this.selected = null;
-    this.gizmo.detach();
-    this.gizmoHelper.visible =false;
-  }
-
-  private deleteSelected(): void {
-    if (!this.selected) return;
-    const uid = this.selected.placement.uid;
-    this.deselect();
-    this.levelHandle.removePlacement(uid);
   }
 
   private onGizmoChange(): void {
@@ -256,7 +371,10 @@ export class Editor {
     p.pos = [r.group.position.x, r.group.position.y, r.group.position.z];
     p.rot = [r.group.rotation.x, r.group.rotation.y, r.group.rotation.z];
     p.scale = [r.group.scale.x, r.group.scale.y, r.group.scale.z];
-    // rebuild physics body to match new transform
     this.levelHandle.updateTransform(p.uid);
   }
+}
+
+function vec3Eq(a: Vec3, b: Vec3): boolean {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
