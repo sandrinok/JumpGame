@@ -12,6 +12,7 @@ import { createHud } from './ui/hud';
 import { loadScore, saveScore } from './persistence/score';
 import { Editor } from './editor/editor';
 import { createPalette } from './editor/palette';
+import { createStartScreen } from './ui/startScreen';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app not found');
@@ -46,12 +47,23 @@ const hud = createHud(container);
 const score = loadScore();
 hud.setBest(score.name, score.best);
 let runMaxHeight = 0;
+let running = false;
 
 const editor = new Editor(renderer, scene, camera, levelHandle, registry);
 editor.palette = createPalette(container, registry);
 editor.onModeChange = (mode) => {
-  input.lockOnClick = mode === 'play';
+  input.lockOnClick = running && mode === 'play';
 };
+
+const startScreen = createStartScreen(container, score);
+startScreen.onPlay = () => {
+  running = true;
+  input.lockOnClick = editor.mode === 'play';
+  hud.setBest(score.name, score.best);
+  respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
+  runMaxHeight = 0;
+};
+input.lockOnClick = false;
 
 handleResize(renderer, camera, container);
 window.addEventListener('resize', () => {
@@ -61,23 +73,25 @@ window.addEventListener('resize', () => {
 startLoop(
   (dt) => {
     if (editor.mode === 'play') {
-      updatePlayer(player, input, dt, followCam.yaw);
-      physics.world.step();
-      followCam.update(input, player.visualRoot.position);
+      if (running) {
+        updatePlayer(player, input, dt, followCam.yaw);
+        physics.world.step();
+        followCam.update(input, player.visualRoot.position);
 
-      const y = player.visualRoot.position.y;
-      hud.setHeight(y);
-      if (y > runMaxHeight) runMaxHeight = y;
+        const y = player.visualRoot.position.y;
+        hud.setHeight(y);
+        if (y > runMaxHeight) runMaxHeight = y;
 
-      if (y < levelHandle.level.killY) {
-        if (runMaxHeight > score.best) {
-          score.best = runMaxHeight;
-          saveScore(score);
-          hud.setBest(score.name, score.best);
+        if (y < levelHandle.level.killY) {
+          if (runMaxHeight > score.best) {
+            score.best = runMaxHeight;
+            saveScore(score);
+            hud.setBest(score.name, score.best);
+          }
+          runMaxHeight = 0;
+          respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
+          hud.flashRespawn();
         }
-        runMaxHeight = 0;
-        respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
-        hud.flashRespawn();
       }
     } else {
       editor.update();
