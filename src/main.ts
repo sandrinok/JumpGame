@@ -6,6 +6,7 @@ import { Input } from './core/input';
 import { addStaticGround, initPhysics } from './physics/world';
 import { createCharacter } from './physics/character';
 import { createPlayer, updatePlayer } from './game/player';
+import { buildDevLevel } from './world/devLevel';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app not found');
@@ -21,6 +22,7 @@ const followCam = new FollowCamera(camera);
 
 const physics = await initPhysics();
 addStaticGround(physics);
+buildDevLevel(scene, physics);
 
 const character = createCharacter(physics, { x: 0, y: 5, z: 0 });
 const player = createPlayer(scene, character);
