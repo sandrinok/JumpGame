@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { AssetDef, Manifest, ManifestEntry } from './types';
 
 export interface ResolvedAsset {
@@ -13,7 +14,7 @@ export interface ResolvedAsset {
 
 export class AssetRegistry {
   private byId = new Map<string, ResolvedAsset>();
-  private gltfLoader = new GLTFLoader();
+  private gltfLoader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 
   get(id: string): ResolvedAsset | undefined {
     return this.byId.get(id);

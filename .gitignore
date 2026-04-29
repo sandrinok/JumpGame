@@ -1,5 +1,6 @@
 node_modules/
 .claude/
+3dassets/
 dist/
 .vite/
 *.log

@@ -3,18 +3,39 @@
   "entries": [
     {
       "id": "box_stone",
-      "asset": { "kind": "primitive", "shape": "box", "color": 9145388 },
-      "tags": ["primitive", "stone"]
+      "asset": {
+        "kind": "primitive",
+        "shape": "box",
+        "color": 9145388
+      },
+      "tags": [
+        "primitive",
+        "stone"
+      ]
     },
     {
       "id": "box_wood",
-      "asset": { "kind": "primitive", "shape": "box", "color": 11434574 },
-      "tags": ["primitive", "wood"]
+      "asset": {
+        "kind": "primitive",
+        "shape": "box",
+        "color": 11434574
+      },
+      "tags": [
+        "primitive",
+        "wood"
+      ]
     },
     {
       "id": "box_grass",
-      "asset": { "kind": "primitive", "shape": "box", "color": 5074493 },
-      "tags": ["primitive", "grass"]
+      "asset": {
+        "kind": "primitive",
+        "shape": "box",
+        "color": 5074493
+      },
+      "tags": [
+        "primitive",
+        "grass"
+      ]
     }
   ]
 }
