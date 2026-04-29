@@ -1,5 +1,6 @@
 import { createCamera, createRenderer, handleResize } from './render/renderer';
 import { createGround, createScene } from './render/scene';
+import { FollowCamera } from './render/followCamera';
 import { startLoop } from './core/loop';
 import { Input } from './core/input';
 import { addStaticGround, initPhysics } from './physics/world';
@@ -16,6 +17,7 @@ createGround(scene);
 handleResize(renderer, camera, container);
 
 const input = new Input(renderer.domElement);
+const followCam = new FollowCamera(camera);
 
 const physics = await initPhysics();
 addStaticGround(physics);
@@ -25,8 +27,9 @@ const player = createPlayer(scene, character);
 
 startLoop(
   (dt) => {
-    updatePlayer(player, input, dt, 0);
+    updatePlayer(player, input, dt, followCam.yaw);
     physics.world.step();
+    followCam.update(input, player.mesh.position);
     input.endFrame();
   },
   () => {
