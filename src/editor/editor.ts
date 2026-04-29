@@ -4,6 +4,7 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
 import type { LevelHandle, RenderedPlacement } from '../world/level';
 import type { Palette } from './palette';
 import type { Placement } from '../world/types';
+import { loadLevelFromDisk, saveLevel, saveLevelAs } from '../persistence/levelFile';
 
 export type EditorMode = 'play' | 'edit';
 
@@ -103,6 +104,15 @@ export class Editor {
       this.duplicateSelected();
       e.preventDefault();
     }
+    else if (e.code === 'KeyS' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (e.shiftKey) saveLevelAs(this.levelHandle.level);
+      else saveLevel(this.levelHandle.level);
+    }
+    else if (e.code === 'KeyO' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      this.openLevel();
+    }
     else if ((e.code === 'Enter' || e.code === 'KeyB') && this.palette) {
       const id = this.palette.current();
       if (id) this.placeAtCursor(id);
@@ -122,6 +132,13 @@ export class Editor {
     };
     const r = this.levelHandle.addPlacement(p);
     if (r) this.select(r);
+  }
+
+  private async openLevel(): Promise<void> {
+    const level = await loadLevelFromDisk();
+    if (!level) return;
+    this.deselect();
+    this.levelHandle.replace(level);
   }
 
   private duplicateSelected(): void {

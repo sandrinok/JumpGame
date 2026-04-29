@@ -33,9 +33,9 @@ const level = await loadLevel('/levels/dev.json');
 const levelHandle = instantiate(scene, physics, registry, level);
 
 const character = createCharacter(physics, {
-  x: level.spawn.pos[0],
-  y: level.spawn.pos[1],
-  z: level.spawn.pos[2],
+  x: levelHandle.level.spawn.pos[0],
+  y: levelHandle.level.spawn.pos[1],
+  z: levelHandle.level.spawn.pos[2],
 });
 const player = createPlayer(scene, character);
 attachCharacterRig(player, '/assets/character/Soldier.glb').catch((e) => {
@@ -66,14 +66,14 @@ startLoop(
       hud.setHeight(y);
       if (y > runMaxHeight) runMaxHeight = y;
 
-      if (y < level.killY) {
+      if (y < levelHandle.level.killY) {
         if (runMaxHeight > score.best) {
           score.best = runMaxHeight;
           saveScore(score);
           hud.setBest(score.name, score.best);
         }
         runMaxHeight = 0;
-        respawnPlayer(player, level.spawn.pos, level.spawn.yaw);
+        respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
         hud.flashRespawn();
       }
     } else {

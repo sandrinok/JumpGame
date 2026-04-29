@@ -44,6 +44,18 @@ export class LevelHandle {
     if (i >= 0) this.level.placements.splice(i, 1);
   }
 
+  clear(): void {
+    for (const uid of [...this.rendered.keys()]) this.removePlacement(uid);
+  }
+
+  replace(next: Level): void {
+    this.clear();
+    this.level = { ...next, placements: [] };
+    for (const p of next.placements) this.addPlacement(p);
+    this.level.spawn = next.spawn;
+    this.level.killY = next.killY;
+  }
+
   updateTransform(uid: string): void {
     const r = this.rendered.get(uid);
     if (!r) return;
