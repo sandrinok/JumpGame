@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Eye, EyeOff, Lock, Unlock, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, Eye, EyeOff, Lock, PanelRightClose, PanelRightOpen, Unlock, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './components/card';
 import { Input } from './components/input';
 import { useEditorUi } from './useEditorUi';
 import { useEditorActions } from './actions';
+import { uiStore } from './uiStore';
 import { cn } from './cn';
 import type { Placement } from '../../world/types';
 
@@ -13,10 +14,27 @@ interface Group {
 }
 
 export function Outliner(): JSX.Element {
-  const { selection, hidden, locked, placements } = useEditorUi();
+  const { selection, hidden, locked, placements, outlinerCollapsed } = useEditorUi();
   const actions = useEditorActions();
   const [filter, setFilter] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const toggleCollapsed = (): void => uiStore.set({ outlinerCollapsed: !outlinerCollapsed });
+
+  if (outlinerCollapsed) {
+    return (
+      <Card className="w-auto self-end">
+        <button
+          onClick={toggleCollapsed}
+          title="Show outliner"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs hover:bg-accent/40"
+        >
+          <PanelRightOpen className="h-3.5 w-3.5" />
+          <span>Outliner ({placements.length})</span>
+        </button>
+      </Card>
+    );
+  }
 
   const groups = useMemo<Group[]>(() => {
     const f = filter.trim().toLowerCase();
@@ -35,13 +53,22 @@ export function Outliner(): JSX.Element {
   const selectedUid = selection?.placement.uid ?? null;
 
   return (
-    <Card className="w-[300px] flex-1 min-h-0 flex flex-col">
+    <Card className="w-[230px] flex-1 min-h-0 flex flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between gap-2">
           <span>Outliner</span>
-          <span className="text-[10px] font-normal text-muted-foreground">
-            {groups.reduce((n, g) => n + g.placements.length, 0)} items
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-normal text-muted-foreground">
+              {groups.reduce((n, g) => n + g.placements.length, 0)}
+            </span>
+            <button
+              onClick={toggleCollapsed}
+              title="Collapse"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <PanelRightClose className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </CardTitle>
         <div className="relative mt-1">
           <Search className="absolute left-2 top-1.5 h-3 w-3 text-muted-foreground" />

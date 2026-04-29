@@ -3,13 +3,15 @@ import { Button } from './components/button';
 import { useEditorUi } from './useEditorUi';
 import { useEditorActions } from './actions';
 
-export function PalettePanel(): JSX.Element {
-  const { assets, paletteCurrent } = useEditorUi();
+export function PalettePanel(): JSX.Element | null {
+  const { assets, paletteCurrent, paletteVisible } = useEditorUi();
   const actions = useEditorActions();
 
+  if (!paletteVisible) return null;
+
   return (
-    <Card className="absolute top-16 left-3 w-[230px] max-h-[75vh] flex flex-col">
-      <CardHeader>
+    <Card className="absolute top-16 left-3 w-[210px] max-h-[60vh] flex flex-col">
+      <CardHeader className="pb-2">
         <CardTitle>Assets</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto flex flex-col gap-1">
@@ -28,15 +30,6 @@ export function PalettePanel(): JSX.Element {
           </Button>
         ))}
       </CardContent>
-      <div className="px-3 pb-3 text-[10px] leading-relaxed text-muted-foreground border-t border-border pt-2">
-        <div className="font-semibold text-foreground/80 mb-1">Edit mode (F1)</div>
-        <div>Cam: hold RMB + WASD/QE · Shift fast · Alt slow</div>
-        <div>LMB select · Enter/B place selected asset</div>
-        <div>G translate · R rotate · S scale</div>
-        <div>X delete · Ctrl+D duplicate · Esc deselect</div>
-        <div>N snap · C collider view (cycle)</div>
-        <div>Ctrl+Z undo · Ctrl+S save · Ctrl+O load</div>
-      </div>
     </Card>
   );
 }

@@ -14,6 +14,7 @@ import {
 } from './components/menubar';
 import { useEditorActions } from './actions';
 import { useEditorUi } from './useEditorUi';
+import { uiStore } from './uiStore';
 import type { DebugMode } from '../../physics/debugView';
 
 const COLLIDER_LABELS: Array<[DebugMode, string]> = [
@@ -111,6 +112,34 @@ export function Topbar(): JSX.Element {
                 </MenubarItem>
               </MenubarSubContent>
             </MenubarSub>
+            <MenubarSeparator />
+            <MenubarCheckboxItem
+              checked={ui.paletteVisible}
+              onSelect={(e) => {
+                e.preventDefault();
+                uiStore.set({ paletteVisible: !ui.paletteVisible });
+              }}
+            >
+              Assets panel
+            </MenubarCheckboxItem>
+            <MenubarCheckboxItem
+              checked={!ui.outlinerCollapsed}
+              onSelect={(e) => {
+                e.preventDefault();
+                uiStore.set({ outlinerCollapsed: !ui.outlinerCollapsed });
+              }}
+            >
+              Outliner
+            </MenubarCheckboxItem>
+            <MenubarCheckboxItem
+              checked={!ui.hotkeysCollapsed}
+              onSelect={(e) => {
+                e.preventDefault();
+                uiStore.set({ hotkeysCollapsed: !ui.hotkeysCollapsed });
+              }}
+            >
+              Hotkeys panel
+            </MenubarCheckboxItem>
             <MenubarSeparator />
             <MenubarCheckboxItem
               checked={ui.snapEnabled}

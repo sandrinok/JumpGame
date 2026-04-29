@@ -31,6 +31,9 @@ export interface EditorUiState {
   placements: Placement[];
   /** uid of placement we are in edit-collider focus mode on, null = normal editor */
   colliderFocusUid: string | null;
+  paletteVisible: boolean;
+  outlinerCollapsed: boolean;
+  hotkeysCollapsed: boolean;
 }
 
 export type Listener = () => void;
@@ -49,6 +52,9 @@ const initial: EditorUiState = {
   placementsVersion: 0,
   placements: [],
   colliderFocusUid: null,
+  paletteVisible: true,
+  outlinerCollapsed: false,
+  hotkeysCollapsed: true,
 };
 
 let state: EditorUiState = initial;
