@@ -5,6 +5,7 @@ import type { LevelHandle, RenderedPlacement } from '../world/level';
 import type { Palette } from './palette';
 import type { Placement } from '../world/types';
 import { loadLevelFromDisk, saveLevel, saveLevelAs } from '../persistence/levelFile';
+import type { AssetRegistry } from '../world/registry';
 
 export type EditorMode = 'play' | 'edit';
 
@@ -31,6 +32,7 @@ export class Editor {
     scene: THREE.Scene,
     private gameCamera: THREE.PerspectiveCamera,
     private levelHandle: LevelHandle,
+    private registry: AssetRegistry,
   ) {
     this.editorCamera = new THREE.PerspectiveCamera(60, gameCamera.aspect, 0.1, 1000);
     this.editorCamera.position.set(15, 15, 15);
@@ -52,6 +54,14 @@ export class Editor {
 
     window.addEventListener('keydown', (e) => this.onKeyDown(e));
     renderer.domElement.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+
+    const dropTarget = renderer.domElement;
+    dropTarget.addEventListener('dragover', (e) => {
+      if (this.mode !== 'edit') return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    });
+    dropTarget.addEventListener('drop', (e) => this.onDrop(e));
   }
 
   get activeCamera(): THREE.PerspectiveCamera {
@@ -132,6 +142,37 @@ export class Editor {
     };
     const r = this.levelHandle.addPlacement(p);
     if (r) this.select(r);
+  }
+
+  private async onDrop(e: DragEvent): Promise<void> {
+    if (this.mode !== 'edit') return;
+    e.preventDefault();
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    for (const f of Array.from(files)) {
+      if (!f.name.toLowerCase().endsWith('.glb') && !f.name.toLowerCase().endsWith('.gltf')) {
+        console.warn('[editor] ignored non-glb file:', f.name);
+        continue;
+      }
+      const buf = await f.arrayBuffer();
+      const id = this.makeAssetId(f.name);
+      try {
+        await this.registry.addGltfFromArrayBuffer(id, buf, 'trimesh');
+        this.palette?.refresh();
+        this.palette?.selectById(id);
+        console.info(`[editor] imported ${f.name} as "${id}" (session-only)`);
+      } catch (err) {
+        console.error('[editor] import failed:', err);
+      }
+    }
+  }
+
+  private makeAssetId(filename: string): string {
+    const base = filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '_').toLowerCase();
+    if (!this.registry.get(base)) return base;
+    let i = 2;
+    while (this.registry.get(`${base}_${i}`)) i++;
+    return `${base}_${i}`;
   }
 
   private async openLevel(): Promise<void> {

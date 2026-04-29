@@ -47,7 +47,7 @@ const score = loadScore();
 hud.setBest(score.name, score.best);
 let runMaxHeight = 0;
 
-const editor = new Editor(renderer, scene, camera, levelHandle);
+const editor = new Editor(renderer, scene, camera, levelHandle, registry);
 editor.palette = createPalette(container, registry);
 
 handleResize(renderer, camera, container);

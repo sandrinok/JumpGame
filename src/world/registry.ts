@@ -30,6 +30,24 @@ export class AssetRegistry {
     await Promise.all(manifest.entries.map((e) => this.resolveEntry(e)));
   }
 
+  /** Add an asset from a parsed gltf scene (e.g., from drag-drop) */
+  addGltfFromScene(id: string, root: THREE.Object3D, collider: 'box' | 'trimesh' | 'convex' = 'trimesh'): ResolvedAsset {
+    root.updateMatrixWorld(true);
+    const bbox = new THREE.Box3().setFromObject(root);
+    const def: AssetDef = { kind: 'gltf', url: `mem:${id}`, collider };
+    const resolved: ResolvedAsset = { id, def, template: root, bbox };
+    this.byId.set(id, resolved);
+    return resolved;
+  }
+
+  /** Parse a GLB ArrayBuffer and register it. */
+  async addGltfFromArrayBuffer(id: string, buffer: ArrayBuffer, collider: 'box' | 'trimesh' | 'convex' = 'trimesh'): Promise<ResolvedAsset> {
+    const gltf = await new Promise<{ scene: THREE.Object3D }>((resolve, reject) => {
+      this.gltfLoader.parse(buffer, '', (g) => resolve(g as unknown as { scene: THREE.Object3D }), reject);
+    });
+    return this.addGltfFromScene(id, gltf.scene, collider);
+  }
+
   private async resolveEntry(entry: ManifestEntry): Promise<void> {
     const asset = entry.asset;
     if (asset.kind === 'primitive') {

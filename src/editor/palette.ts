@@ -5,6 +5,8 @@ export interface Palette {
   setVisible(v: boolean): void;
   /** currently selected asset id, or null */
   current(): string | null;
+  refresh(): void;
+  selectById(id: string): void;
 }
 
 export function createPalette(parent: HTMLElement, registry: AssetRegistry): Palette {
@@ -69,6 +71,13 @@ export function createPalette(parent: HTMLElement, registry: AssetRegistry): Pal
     },
     current() {
       return currentId;
+    },
+    refresh() {
+      render();
+    },
+    selectById(id) {
+      currentId = id;
+      render();
     },
   };
 }
