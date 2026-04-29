@@ -77,14 +77,12 @@ export class PhysicsDebugView {
     this.disposeGroup(this.wireGroup);
     this.disposeGroup(this.solidGroup);
 
-    const colliders = this.physics.world.colliders;
-    const n = colliders.len();
-    for (let i = 0; i < n; i++) {
-      const c = colliders.get(i);
-      if (!c) continue;
-      if (this.excluded.has(c.handle)) continue;
+    // forEach iterates all live colliders regardless of handle sparsity (handles
+    // become sparse after rebuild-on-transform). get(i) on raw indices misses them.
+    this.physics.world.colliders.forEach((c) => {
+      if (this.excluded.has(c.handle)) return;
       const geo = this.buildGeometry(c);
-      if (!geo) continue;
+      if (!geo) return;
       const t = c.translation();
       const r = c.rotation();
 
@@ -100,11 +98,9 @@ export class PhysicsDebugView {
         lines.position.set(t.x, t.y, t.z);
         lines.quaternion.set(r.x, r.y, r.z, r.w);
         this.wireGroup.add(lines);
-        // EdgesGeometry holds its own buffers; we'll dispose on next frame.
       }
-      // If only wire is shown we still need the source geo disposed
       if (!this.solidGroup.visible) geo.dispose();
-    }
+    });
   }
 
   private disposeGroup(group: THREE.Group): void {
