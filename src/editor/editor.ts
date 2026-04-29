@@ -717,7 +717,11 @@ export class Editor {
     if (!asset) return;
 
     const p = r.placement;
-    const params = this.levelHandle.getAssetOverride(p.id)?.params ?? {};
+    const aOverride = this.levelHandle.getAssetOverride(p.id);
+    const params = aOverride?.params ?? {};
+    const colliderType =
+      aOverride?.collider ?? (asset.def.kind === 'gltf' ? asset.def.collider : 'box');
+    const isMeshShape = colliderType === 'trimesh' || colliderType === 'convex';
 
     const bboxSize = new THREE.Vector3();
     const bboxCenter = new THREE.Vector3();
@@ -729,10 +733,11 @@ export class Editor {
       bboxCenter.set(0, 0, 0);
     }
 
+    const defaultCenter = isMeshShape ? new THREE.Vector3(0, 0, 0) : bboxCenter;
     const offsetU = new THREE.Vector3(
-      params.offset?.[0] ?? bboxCenter.x,
-      params.offset?.[1] ?? bboxCenter.y,
-      params.offset?.[2] ?? bboxCenter.z,
+      params.offset?.[0] ?? defaultCenter.x,
+      params.offset?.[1] ?? defaultCenter.y,
+      params.offset?.[2] ?? defaultCenter.z,
     );
     const sizeU = new THREE.Vector3(
       params.size?.[0] ?? bboxSize.x,

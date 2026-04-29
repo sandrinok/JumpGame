@@ -175,10 +175,18 @@ function createBody(
     const wx = Math.max(0.01, (params.size?.[0] ?? bboxSize.x) * p.scale[0]);
     const wy = Math.max(0.01, (params.size?.[1] ?? bboxSize.y) * p.scale[1]);
     const wz = Math.max(0.01, (params.size?.[2] ?? bboxSize.z) * p.scale[2]);
+
+    // Primitive shapes are centered on the collider origin, so they need to be
+    // translated by the model's bbox center. Trimesh / convex already carry
+    // bbox-relative vertex positions, so their natural offset is zero.
+    const isMeshShape = colliderType === 'trimesh' || colliderType === 'convex';
+    const defaultOffset = isMeshShape
+      ? { x: 0, y: 0, z: 0 }
+      : { x: bboxCenter.x, y: bboxCenter.y, z: bboxCenter.z };
     const offset = {
-      x: (params.offset?.[0] ?? bboxCenter.x) * p.scale[0],
-      y: (params.offset?.[1] ?? bboxCenter.y) * p.scale[1],
-      z: (params.offset?.[2] ?? bboxCenter.z) * p.scale[2],
+      x: (params.offset?.[0] ?? defaultOffset.x) * p.scale[0],
+      y: (params.offset?.[1] ?? defaultOffset.y) * p.scale[1],
+      z: (params.offset?.[2] ?? defaultOffset.z) * p.scale[2],
     };
     const localRot = params.rot ? quatFromEuler(params.rot) : null;
     switch (colliderType) {
