@@ -200,13 +200,29 @@ function collectMeshGeometry(
   const verts: number[] = [];
   const idx: number[] = [];
   let offset = 0;
+
+  // Ensure world matrices are current. The template root's own transform should
+  // be identity (we never mutate it); sub-mesh matrices may not be.
+  root.updateMatrixWorld(true);
+  const rootInverse = new THREE.Matrix4().copy(root.matrixWorld).invert();
+
+  // Reused scratch
+  const localMatrix = new THREE.Matrix4();
+  const v = new THREE.Vector3();
+
   root.traverse((o) => {
     const m = o as THREE.Mesh;
     if (!m.isMesh || !m.geometry) return;
     const geo = m.geometry;
     const pos = geo.attributes.position;
+    if (!pos) return;
+
+    // Mesh transform expressed in the root's local frame
+    localMatrix.copy(rootInverse).multiply(m.matrixWorld);
+
     for (let i = 0; i < pos.count; i++) {
-      verts.push(pos.getX(i) * scale[0], pos.getY(i) * scale[1], pos.getZ(i) * scale[2]);
+      v.set(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(localMatrix);
+      verts.push(v.x * scale[0], v.y * scale[1], v.z * scale[2]);
     }
     const indexAttr = geo.index;
     if (indexAttr) {

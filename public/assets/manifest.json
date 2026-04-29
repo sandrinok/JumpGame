@@ -69,6 +69,17 @@
       "tags": [
         "imported"
       ]
+    },
+    {
+      "id": "fortnite_-_pizza_planet_delivery_truck",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/fortnite_-_pizza_planet_delivery_truck.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
     }
   ]
 }
