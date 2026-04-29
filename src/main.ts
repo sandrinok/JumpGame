@@ -6,7 +6,8 @@ import { Input } from './core/input';
 import { addStaticGround, initPhysics } from './physics/world';
 import { createCharacter } from './physics/character';
 import { attachCharacterRig, createPlayer, updatePlayer } from './game/player';
-import { buildDevLevel } from './world/devLevel';
+import { AssetRegistry } from './world/registry';
+import { instantiate, loadLevel } from './world/level';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app not found');
@@ -22,9 +23,17 @@ const followCam = new FollowCamera(camera);
 
 const physics = await initPhysics();
 addStaticGround(physics);
-buildDevLevel(scene, physics);
 
-const character = createCharacter(physics, { x: 0, y: 5, z: 0 });
+const registry = new AssetRegistry();
+await registry.loadManifest('/assets/manifest.json');
+const level = await loadLevel('/levels/dev.json');
+instantiate(scene, physics, registry, level);
+
+const character = createCharacter(physics, {
+  x: level.spawn.pos[0],
+  y: level.spawn.pos[1],
+  z: level.spawn.pos[2],
+});
 const player = createPlayer(scene, character);
 attachCharacterRig(player, '/assets/character/Soldier.glb').catch((e) => {
   console.warn('Character rig failed to load, using debug capsule:', e);
