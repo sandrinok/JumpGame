@@ -4,16 +4,62 @@ import type { Physics } from '../physics/world';
 import type { AssetRegistry, ResolvedAsset } from './registry';
 import type { Level, Placement } from './types';
 
-export interface LevelHandle {
-  level: Level;
-  /** placement uid -> render handle */
-  rendered: Map<string, RenderedPlacement>;
-}
-
-interface RenderedPlacement {
+export interface RenderedPlacement {
   placement: Placement;
   group: THREE.Object3D;
   body: RAPIER.RigidBody;
+  collider: RAPIER.Collider;
+}
+
+export class LevelHandle {
+  rendered = new Map<string, RenderedPlacement>();
+
+  constructor(
+    public level: Level,
+    private scene: THREE.Scene,
+    private physics: Physics,
+    private registry: AssetRegistry,
+  ) {}
+
+  addPlacement(p: Placement): RenderedPlacement | null {
+    const asset = this.registry.get(p.id);
+    if (!asset) {
+      console.warn(`[level] missing asset: ${p.id}`);
+      return null;
+    }
+    const r = build(this.scene, this.physics, asset, p);
+    this.rendered.set(p.uid, r);
+    if (!this.level.placements.includes(p)) this.level.placements.push(p);
+    return r;
+  }
+
+  removePlacement(uid: string): void {
+    const r = this.rendered.get(uid);
+    if (!r) return;
+    this.scene.remove(r.group);
+    disposeObject(r.group);
+    this.physics.world.removeRigidBody(r.body);
+    this.rendered.delete(uid);
+    const i = this.level.placements.findIndex((p) => p.uid === uid);
+    if (i >= 0) this.level.placements.splice(i, 1);
+  }
+
+  updateTransform(uid: string): void {
+    const r = this.rendered.get(uid);
+    if (!r) return;
+    const p = r.placement;
+    // refresh visual (already mutated externally — caller writes to placement)
+    r.group.position.set(p.pos[0], p.pos[1], p.pos[2]);
+    r.group.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
+    r.group.scale.set(p.scale[0], p.scale[1], p.scale[2]);
+
+    // recreate physics body to reflect new scale/pos/rot
+    this.physics.world.removeRigidBody(r.body);
+    const asset = this.registry.get(p.id)!;
+    const { body, collider } = createBody(this.physics, asset, p);
+    r.body = body;
+    r.collider = collider;
+  }
 }
 
 export function instantiate(
@@ -22,61 +68,69 @@ export function instantiate(
   registry: AssetRegistry,
   level: Level,
 ): LevelHandle {
-  const rendered = new Map<string, RenderedPlacement>();
-  for (const p of level.placements) {
-    const asset = registry.get(p.id);
-    if (!asset) {
-      console.warn(`[level] missing asset: ${p.id}`);
-      continue;
-    }
-    const r = instantiatePlacement(scene, physics, asset, p);
-    rendered.set(p.uid, r);
+  const handle = new LevelHandle(level, scene, physics, registry);
+  for (const p of [...level.placements]) {
+    // remove from array temporarily so addPlacement doesn't double-push
+    const idx = handle.level.placements.indexOf(p);
+    if (idx >= 0) handle.level.placements.splice(idx, 1);
+    handle.addPlacement(p);
   }
-  return { level, rendered };
+  return handle;
 }
 
-function instantiatePlacement(
+function build(
   scene: THREE.Scene,
   physics: Physics,
   asset: ResolvedAsset,
   p: Placement,
 ): RenderedPlacement {
   const group = new THREE.Group();
+  group.userData.uid = p.uid;
   group.add(asset.template.clone(true));
   group.position.set(p.pos[0], p.pos[1], p.pos[2]);
   group.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
   group.scale.set(p.scale[0], p.scale[1], p.scale[2]);
   scene.add(group);
 
+  const { body, collider } = createBody(physics, asset, p);
+  return { placement: p, group, body, collider };
+}
+
+function createBody(
+  physics: Physics,
+  asset: ResolvedAsset,
+  p: Placement,
+): { body: RAPIER.RigidBody; collider: RAPIER.Collider } {
   const bodyDesc = RAPIER.RigidBodyDesc.fixed()
     .setTranslation(p.pos[0], p.pos[1], p.pos[2])
     .setRotation(quatFromEuler(p.rot));
   const body = physics.world.createRigidBody(bodyDesc);
 
+  let colDesc: RAPIER.ColliderDesc;
   if (asset.def.kind === 'primitive' && asset.def.shape === 'box') {
-    const halfX = (p.scale[0] * 1) / 2;
-    const halfY = (p.scale[1] * 1) / 2;
-    const halfZ = (p.scale[2] * 1) / 2;
-    physics.world.createCollider(RAPIER.ColliderDesc.cuboid(halfX, halfY, halfZ), body);
+    colDesc = RAPIER.ColliderDesc.cuboid(p.scale[0] / 2, p.scale[1] / 2, p.scale[2] / 2);
   } else if (asset.def.kind === 'gltf') {
-    // collider sizing from bbox * scale
     const size = new THREE.Vector3();
     asset.bbox.getSize(size);
     if (asset.def.collider === 'box') {
-      const hx = (size.x * p.scale[0]) / 2;
-      const hy = (size.y * p.scale[1]) / 2;
-      const hz = (size.z * p.scale[2]) / 2;
-      physics.world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz), body);
-    } else if (asset.def.collider === 'trimesh' || asset.def.collider === 'convex') {
+      colDesc = RAPIER.ColliderDesc.cuboid(
+        (size.x * p.scale[0]) / 2,
+        (size.y * p.scale[1]) / 2,
+        (size.z * p.scale[2]) / 2,
+      );
+    } else {
       const { vertices, indices } = collectMeshGeometry(asset.template, p.scale);
-      const desc = asset.def.collider === 'trimesh'
-        ? RAPIER.ColliderDesc.trimesh(vertices, indices)
-        : RAPIER.ColliderDesc.convexHull(vertices) ?? RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);
-      physics.world.createCollider(desc, body);
+      const built =
+        asset.def.collider === 'trimesh'
+          ? RAPIER.ColliderDesc.trimesh(vertices, indices)
+          : RAPIER.ColliderDesc.convexHull(vertices);
+      colDesc = built ?? RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);
     }
+  } else {
+    colDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);
   }
-
-  return { placement: p, group, body };
+  const collider = physics.world.createCollider(colDesc, body);
+  return { body, collider };
 }
 
 function quatFromEuler(rot: [number, number, number]) {
@@ -109,6 +163,16 @@ function collectMeshGeometry(
     offset += pos.count;
   });
   return { vertices: new Float32Array(verts), indices: new Uint32Array(idx) };
+}
+
+function disposeObject(obj: THREE.Object3D): void {
+  obj.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.geometry) m.geometry.dispose();
+    const mat = m.material as THREE.Material | THREE.Material[] | undefined;
+    if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
+    else if (mat) mat.dispose();
+  });
 }
 
 export async function loadLevel(url: string): Promise<Level> {
