@@ -19,7 +19,7 @@ type EditorMode = 'play' | 'edit';
 interface EditorApi {
   mode: EditorMode;
   activeCamera: import('three').PerspectiveCamera;
-  update(): void;
+  update(dt: number): void;
   onResize(aspect: number): void;
   onModeChange: ((mode: EditorMode) => void) | null;
 }
@@ -74,7 +74,7 @@ if (import.meta.env.DEV) {
     import('./editor/editor'),
     import('./editor/palette'),
   ]);
-  const e = new Editor(renderer, scene, camera, levelHandle, registry);
+  const e = new Editor(renderer, scene, camera, levelHandle, registry, input);
   e.palette = createPalette(container, registry);
   editor = e;
 }
@@ -126,7 +126,7 @@ startLoop(
         }
       }
     } else {
-      editor?.update();
+      editor?.update(dt);
     }
     input.endFrame();
   },

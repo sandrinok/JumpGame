@@ -57,6 +57,8 @@ export function createPalette(parent: HTMLElement, registry: AssetRegistry): Pal
   hint.style.cssText = 'margin-top: 10px; font-size: 11px; opacity: 0.7; line-height: 1.4;';
   hint.innerHTML = `
     <b>Edit mode (F1)</b><br>
+    <b>Camera:</b> hold RMB + WASD/QE · Shift fast · Alt slow<br>
+    <span style="opacity:0.7">Scroll while looking = speed · LMB to select</span><br>
     Click asset, then Enter or B to place<br>
     G/T translate · R rotate · S scale<br>
     X delete · Ctrl+D duplicate · Esc deselect<br>

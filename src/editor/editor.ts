@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { LevelHandle, RenderedPlacement } from '../world/level';
 import type { Palette } from './palette';
@@ -7,6 +6,8 @@ import type { Placement, Vec3 } from '../world/types';
 import { loadLevelFromDisk, saveLevel, saveLevelAs } from '../persistence/levelFile';
 import type { AssetRegistry } from '../world/registry';
 import { History } from './history';
+import { EditorCameraController } from './cameraController';
+import type { Input } from '../core/input';
 
 export type EditorMode = 'play' | 'edit';
 
@@ -23,7 +24,7 @@ const SCALE_SNAP = 0.1;
 export class Editor {
   mode: EditorMode = 'play';
   editorCamera: THREE.PerspectiveCamera;
-  private orbit: OrbitControls;
+  private flyCam: EditorCameraController;
   private gizmo: TransformControls;
   private gizmoHelper: THREE.Object3D;
   private raycaster = new THREE.Raycaster();
@@ -44,19 +45,18 @@ export class Editor {
     private gameCamera: THREE.PerspectiveCamera,
     private levelHandle: LevelHandle,
     private registry: AssetRegistry,
+    private input: Input,
   ) {
     this.editorCamera = new THREE.PerspectiveCamera(60, gameCamera.aspect, 0.1, 1000);
     this.editorCamera.position.set(15, 15, 15);
     this.editorCamera.lookAt(0, 0, 0);
 
-    this.orbit = new OrbitControls(this.editorCamera, renderer.domElement);
-    this.orbit.enableDamping = true;
-    this.orbit.enabled = false;
+    this.flyCam = new EditorCameraController(this.editorCamera, renderer.domElement);
+    this.flyCam.syncFromCamera();
 
     this.gizmo = new TransformControls(this.editorCamera, renderer.domElement);
     this.applySnap();
     this.gizmo.addEventListener('dragging-changed', (e) => {
-      this.orbit.enabled = !e.value && this.mode === 'edit';
       if (e.value) this.beginGizmoDrag();
       else this.endGizmoDrag();
     });
@@ -85,17 +85,18 @@ export class Editor {
   setMode(mode: EditorMode): void {
     if (this.mode === mode) return;
     this.mode = mode;
-    this.orbit.enabled = mode === 'edit';
+    this.flyCam.enabled = mode === 'edit';
     this.palette?.setVisible(mode === 'edit');
     this.onModeChange?.(mode);
     if (mode === 'play') {
       this.deselect();
+      this.flyCam.release();
       if (document.pointerLockElement) document.exitPointerLock();
     } else {
       if (document.pointerLockElement) document.exitPointerLock();
       this.editorCamera.position.copy(this.gameCamera.position);
-      this.orbit.target.copy(this.gameCamera.position).add(new THREE.Vector3(0, 0, -5));
-      this.orbit.update();
+      this.editorCamera.quaternion.copy(this.gameCamera.quaternion);
+      this.flyCam.syncFromCamera();
     }
   }
 
@@ -103,8 +104,8 @@ export class Editor {
     this.setMode(this.mode === 'play' ? 'edit' : 'play');
   }
 
-  update(): void {
-    if (this.mode === 'edit') this.orbit.update();
+  update(dt: number): void {
+    if (this.mode === 'edit') this.flyCam.update(dt, this.input);
   }
 
   onResize(aspect: number): void {
@@ -285,7 +286,10 @@ export class Editor {
 
   private onPointerDown(e: PointerEvent): void {
     if (this.mode !== 'edit') return;
+    // left click only — middle/right are camera controls
     if (e.button !== 0) return;
+    // ignore selection clicks while right-mouse fly-look is active
+    if (document.pointerLockElement === this.renderer.domElement) return;
     if ((this.gizmo as unknown as { dragging: boolean }).dragging) return;
 
     const rect = this.renderer.domElement.getBoundingClientRect();
