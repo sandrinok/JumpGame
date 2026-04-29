@@ -42,23 +42,39 @@ const MAX_TEX = 2048;
 
 async function main() {
   await mkdir(OUT, { recursive: true });
-  await MeshoptEncoder.ready;
 
   const sources = await collectGltfFiles(SRC);
   if (sources.length === 0) {
-    console.log(`No .glb / .gltf in ${SRC}. Drop files there first.`);
+    console.log(`[optimize] no .glb / .gltf in ${path.relative(process.cwd(), SRC)}; nothing to do.`);
     return;
   }
 
-  const io = new NodeIO()
-    .registerExtensions(ALL_EXTENSIONS)
-    .registerDependencies({ 'meshopt.encoder': MeshoptEncoder });
-
-  const processed = [];
+  // build the work list first so we can short-circuit if everything is fresh
+  const work = [];
+  const allItems = [];
   for (const src of sources) {
     const rel = path.relative(SRC, src).replace(/\\/g, '/');
     const id = makeId(rel);
     const outFile = path.join(OUT, `${id}.glb`);
+    allItems.push({ id, file: `${id}.glb` });
+    if (await isUpToDate(src, outFile)) continue;
+    work.push({ src, rel, id, outFile });
+  }
+
+  if (work.length === 0) {
+    console.log(`[optimize] ${sources.length} asset(s) already up to date.`);
+    await updateManifest(allItems, /* silent */ true);
+    return;
+  }
+
+  await MeshoptEncoder.ready;
+  const io = new NodeIO()
+    .registerExtensions(ALL_EXTENSIONS)
+    .registerDependencies({ 'meshopt.encoder': MeshoptEncoder });
+
+  console.log(`[optimize] processing ${work.length} of ${sources.length} asset(s)...`);
+  const processed = [];
+  for (const { src, rel, id, outFile } of work) {
     const before = (await stat(src)).size;
 
     process.stdout.write(`  ${rel}  …  `);
@@ -82,8 +98,18 @@ async function main() {
     }
   }
 
-  await updateManifest(processed);
-  console.log(`\nDone. ${processed.length} asset(s) written to ${path.relative(process.cwd(), OUT)}.`);
+  // Manifest gets the full list so previously-processed items stay registered.
+  await updateManifest(allItems);
+  console.log(`[optimize] ${processed.length} asset(s) written to ${path.relative(process.cwd(), OUT)}.`);
+}
+
+async function isUpToDate(src, out) {
+  try {
+    const [a, b] = await Promise.all([stat(src), stat(out)]);
+    return b.mtimeMs >= a.mtimeMs;
+  } catch {
+    return false;
+  }
 }
 
 async function collectGltfFiles(dir) {
@@ -119,7 +145,7 @@ function fmt(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
 }
 
-async function updateManifest(items) {
+async function updateManifest(items, silent = false) {
   let manifest;
   try {
     manifest = JSON.parse(await readFile(MANIFEST, 'utf8'));
@@ -143,7 +169,7 @@ async function updateManifest(items) {
   }
   if (added > 0) {
     await writeFile(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
-    console.log(`Added ${added} new entries to manifest.json (existing untouched).`);
+    if (!silent) console.log(`[optimize] added ${added} new entries to manifest.json (existing untouched).`);
   }
 }
 

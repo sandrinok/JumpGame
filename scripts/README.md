@@ -19,6 +19,18 @@ Output lands in `public/assets/3d/` and gets auto-registered in
 Tweak collider type (`box` / `convex` / `trimesh`) and `tags` in the manifest
 afterwards — the script never touches existing entries.
 
+## Auto-runs on dev/build
+
+`predev` and `prebuild` hooks are wired in `package.json`, so:
+
+```
+npm run dev     # optimize-assets runs first, then Vite
+npm run build   # optimize-assets runs first, then production build
+```
+
+The script skips files whose output is already newer than the source, so
+repeat runs cost ~0.5s when nothing has changed.
+
 ## Custom paths
 
 ```
