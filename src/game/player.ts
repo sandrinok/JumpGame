@@ -71,6 +71,8 @@ export async function attachCharacterRig(player: Player, url: string): Promise<v
   // model origin is at the feet; offset down by capsule half-height + radius
   const feetOffset = -(player.body.halfHeight + player.body.radius);
   rig.root.position.y = feetOffset;
+  // Soldier.glb faces -Z by default; player yaw=0 means facing +Z, so flip 180°.
+  rig.root.rotation.y = Math.PI;
   player.visualRoot.add(rig.root);
   player.debugMesh.visible = false;
   player.rig = rig;

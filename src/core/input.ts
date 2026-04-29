@@ -5,6 +5,8 @@ export class Input {
   mouseDY = 0;
   scrollDY = 0;
   pointerLocked = false;
+  /** When false, clicking the target does not request pointer-lock (e.g. in editor mode). */
+  lockOnClick = true;
 
   constructor(target: HTMLElement = document.body) {
     window.addEventListener('keydown', (e) => {
@@ -16,6 +18,7 @@ export class Input {
     window.addEventListener('blur', () => this.keys.clear());
 
     target.addEventListener('click', () => {
+      if (!this.lockOnClick) return;
       if (!this.pointerLocked) target.requestPointerLock();
     });
     document.addEventListener('pointerlockchange', () => {

@@ -26,6 +26,7 @@ export class Editor {
   private selected: RenderedPlacement | null = null;
   private gizmoMode: 'translate' | 'rotate' | 'scale' = 'translate';
   palette: Palette | null = null;
+  onModeChange: ((mode: EditorMode) => void) | null = null;
 
   constructor(
     private renderer: THREE.WebGLRenderer,
@@ -73,6 +74,7 @@ export class Editor {
     this.mode = mode;
     this.orbit.enabled = mode === 'edit';
     this.palette?.setVisible(mode === 'edit');
+    this.onModeChange?.(mode);
     if (mode === 'play') {
       this.deselect();
       if (document.pointerLockElement) document.exitPointerLock();

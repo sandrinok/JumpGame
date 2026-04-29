@@ -49,6 +49,9 @@ let runMaxHeight = 0;
 
 const editor = new Editor(renderer, scene, camera, levelHandle, registry);
 editor.palette = createPalette(container, registry);
+editor.onModeChange = (mode) => {
+  input.lockOnClick = mode === 'play';
+};
 
 handleResize(renderer, camera, container);
 window.addEventListener('resize', () => {
