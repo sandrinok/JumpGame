@@ -10,10 +10,19 @@ import { AssetRegistry } from './world/registry';
 import { instantiate, loadLevel } from './world/level';
 import { createHud } from './ui/hud';
 import { loadScore, saveScore } from './persistence/score';
-import { Editor } from './editor/editor';
-import { createPalette } from './editor/palette';
 import { createStartScreen } from './ui/startScreen';
 import { playWindBurst, unlockAudio } from './audio/sfx';
+import { createDebugHud } from './ui/debugHud';
+
+type EditorMode = 'play' | 'edit';
+
+interface EditorApi {
+  mode: EditorMode;
+  activeCamera: import('three').PerspectiveCamera;
+  update(): void;
+  onResize(aspect: number): void;
+  onModeChange: ((mode: EditorMode) => void) | null;
+}
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app not found');
@@ -49,18 +58,38 @@ const score = loadScore();
 hud.setBest(score.name, score.best);
 let runMaxHeight = 0;
 let running = false;
+let currentMode: EditorMode = 'play';
 
-const editor = new Editor(renderer, scene, camera, levelHandle, registry);
-editor.palette = createPalette(container, registry);
-editor.onModeChange = (mode) => {
-  input.lockOnClick = running && mode === 'play';
-};
+const debugHud = createDebugHud(container);
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'F3') {
+    debugHud.toggle();
+    e.preventDefault();
+  }
+});
+
+let editor: EditorApi | null = null;
+if (import.meta.env.DEV) {
+  const [{ Editor }, { createPalette }] = await Promise.all([
+    import('./editor/editor'),
+    import('./editor/palette'),
+  ]);
+  const e = new Editor(renderer, scene, camera, levelHandle, registry);
+  e.palette = createPalette(container, registry);
+  editor = e;
+}
+if (editor) {
+  editor.onModeChange = (mode) => {
+    currentMode = mode;
+    input.lockOnClick = running && mode === 'play';
+  };
+}
 
 const startScreen = createStartScreen(container, score);
 startScreen.onPlay = () => {
   running = true;
   unlockAudio();
-  input.lockOnClick = editor.mode === 'play';
+  input.lockOnClick = currentMode === 'play';
   hud.setBest(score.name, score.best);
   respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
   runMaxHeight = 0;
@@ -69,12 +98,12 @@ input.lockOnClick = false;
 
 handleResize(renderer, camera, container);
 window.addEventListener('resize', () => {
-  editor.onResize(container.clientWidth / container.clientHeight);
+  editor?.onResize(container.clientWidth / container.clientHeight);
 });
 
 startLoop(
   (dt) => {
-    if (editor.mode === 'play') {
+    if (currentMode === 'play') {
       if (running) {
         updatePlayer(player, input, dt, followCam.yaw);
         physics.world.step();
@@ -97,11 +126,12 @@ startLoop(
         }
       }
     } else {
-      editor.update();
+      editor?.update();
     }
     input.endFrame();
   },
   () => {
-    renderer.render(scene, editor.activeCamera);
+    renderer.render(scene, editor?.activeCamera ?? camera);
+    debugHud.sample(renderer);
   },
 );
