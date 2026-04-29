@@ -221,7 +221,10 @@ export class Editor {
     else if (e.code === 'KeyR') this.setGizmoMode('rotate');
     else if (e.code === 'KeyS') this.setGizmoMode('scale');
     else if (e.code === 'Delete' || e.code === 'KeyX') this.deleteSelected();
-    else if (e.code === 'Escape') this.deselect();
+    else if (e.code === 'Escape') {
+      if (uiStore.get().colliderFocusUid) this.exitColliderFocus();
+      else this.deselect();
+    }
     else if (e.code === 'KeyN') {
       this.setSnap(!this.snapEnabled);
     }
@@ -437,6 +440,8 @@ export class Editor {
       toggleLocked: (uid) => this.toggleLocked(uid),
       snapView: (v) => this.snapView(v),
       toggleOrtho: () => this.toggleOrtho(),
+      enterColliderFocus: (uid) => this.enterColliderFocus(uid),
+      exitColliderFocus: () => this.exitColliderFocus(),
     };
   }
 
@@ -612,6 +617,37 @@ export class Editor {
       r.group.visible = false;
     }
     uiStore.set({ hidden: next });
+  }
+
+  /** Isolated view of one placement so the user can see/tweak its collider in peace. */
+  enterColliderFocus(uid: string): void {
+    const r = this.levelHandle.rendered.get(uid);
+    if (!r) return;
+    // Hide all other placements
+    for (const [otherUid, other] of this.levelHandle.rendered) {
+      if (otherUid !== uid) other.group.visible = false;
+    }
+    // Force solid collision view
+    this.physicsDebug?.setMode('solid');
+    uiStore.set({ colliderView: 'solid', colliderFocusUid: uid });
+    // Frame camera on the placement
+    const target = new THREE.Vector3(r.placement.pos[0], r.placement.pos[1], r.placement.pos[2]);
+    const offset = new THREE.Vector3(6, 4, 6);
+    this.editorCamera.position.copy(target).add(offset);
+    this.editorCamera.lookAt(target);
+    this.flyCam.syncFromCamera();
+    this.editorOrthoCamera.position.copy(this.editorCamera.position);
+    this.editorOrthoCamera.quaternion.copy(this.editorCamera.quaternion);
+  }
+
+  exitColliderFocus(): void {
+    if (!uiStore.get().colliderFocusUid) return;
+    // Restore visibility (respect existing hidden set)
+    const hidden = uiStore.get().hidden;
+    for (const [uid, r] of this.levelHandle.rendered) {
+      r.group.visible = !hidden.has(uid);
+    }
+    uiStore.set({ colliderFocusUid: null });
   }
 
   toggleLocked(uid: string): void {

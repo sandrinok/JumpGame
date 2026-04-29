@@ -4,6 +4,7 @@ import { PalettePanel } from './PalettePanel';
 import { InspectorPanel } from './InspectorPanel';
 import { Topbar } from './Topbar';
 import { Outliner } from './Outliner';
+import { FocusBanner } from './FocusBanner';
 
 interface Props {
   actions: EditorActions;
@@ -16,6 +17,7 @@ export function EditorRoot({ actions }: Props): JSX.Element | null {
     <EditorActionsContext.Provider value={actions}>
       <div className="editor-ui-root">
         <Topbar />
+        <FocusBanner />
         <PalettePanel />
         <div className="absolute top-16 bottom-3 right-3 flex flex-col gap-3 max-h-[calc(100vh-80px)]">
           <Outliner />

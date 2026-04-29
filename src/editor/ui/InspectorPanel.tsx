@@ -16,7 +16,7 @@ const COLLIDER_OPTIONS: Array<{ value: ColliderShape; label: string; hint: strin
 ];
 
 export function InspectorPanel(): JSX.Element {
-  const { selection, selectionAsset } = useEditorUi();
+  const { selection, selectionAsset, colliderFocusUid } = useEditorUi();
   const actions = useEditorActions();
 
   if (!selection || !selectionAsset) {
@@ -122,6 +122,25 @@ export function InspectorPanel(): JSX.Element {
                   onClick={() => actions.changeColliderParams(null)}
                 >
                   Reset all overrides
+                </Button>
+              )}
+              {colliderFocusUid === p.uid ? (
+                <Button
+                  size="xs"
+                  variant="default"
+                  className="w-full mt-1.5"
+                  onClick={() => actions.exitColliderFocus()}
+                >
+                  Done editing collider (Esc)
+                </Button>
+              ) : (
+                <Button
+                  size="xs"
+                  variant="outline"
+                  className="w-full mt-1.5"
+                  onClick={() => actions.enterColliderFocus(p.uid)}
+                >
+                  Edit collider in isolation
                 </Button>
               )}
             </div>

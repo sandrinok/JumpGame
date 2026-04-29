@@ -29,6 +29,8 @@ export interface EditorUiState {
   placementsVersion: number;
   /** snapshot of all level placements for the outliner */
   placements: Placement[];
+  /** uid of placement we are in edit-collider focus mode on, null = normal editor */
+  colliderFocusUid: string | null;
 }
 
 export type Listener = () => void;
@@ -46,6 +48,7 @@ const initial: EditorUiState = {
   locked: new Set(),
   placementsVersion: 0,
   placements: [],
+  colliderFocusUid: null,
 };
 
 let state: EditorUiState = initial;

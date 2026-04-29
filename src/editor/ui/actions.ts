@@ -31,6 +31,8 @@ export interface EditorActions {
   // camera
   snapView(view: ViewName): void;
   toggleOrtho(): void;
+  enterColliderFocus(uid: string): void;
+  exitColliderFocus(): void;
 }
 
 const noop: EditorActions = {
@@ -56,6 +58,8 @@ const noop: EditorActions = {
   toggleLocked: () => undefined,
   snapView: () => undefined,
   toggleOrtho: () => undefined,
+  enterColliderFocus: () => undefined,
+  exitColliderFocus: () => undefined,
 };
 
 export const EditorActionsContext = createContext<EditorActions>(noop);
