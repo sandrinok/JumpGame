@@ -122,18 +122,25 @@ function createBody(
   if (asset.def.kind === 'primitive' && asset.def.shape === 'box') {
     colDesc = RAPIER.ColliderDesc.cuboid(p.scale[0] / 2, p.scale[1] / 2, p.scale[2] / 2);
   } else if (asset.def.kind === 'gltf') {
+    const colliderType = p.collider ?? asset.def.collider;
     const size = new THREE.Vector3();
     asset.bbox.getSize(size);
-    if (asset.def.collider === 'box') {
+    if (colliderType === 'box') {
+      const center = new THREE.Vector3();
+      asset.bbox.getCenter(center);
       colDesc = RAPIER.ColliderDesc.cuboid(
-        (size.x * p.scale[0]) / 2,
-        (size.y * p.scale[1]) / 2,
-        (size.z * p.scale[2]) / 2,
+        Math.max(0.01, (size.x * p.scale[0]) / 2),
+        Math.max(0.01, (size.y * p.scale[1]) / 2),
+        Math.max(0.01, (size.z * p.scale[2]) / 2),
+      ).setTranslation(
+        center.x * p.scale[0],
+        center.y * p.scale[1],
+        center.z * p.scale[2],
       );
     } else {
       const { vertices, indices } = collectMeshGeometry(asset.template, p.scale);
       const built =
-        asset.def.collider === 'trimesh'
+        colliderType === 'trimesh'
           ? RAPIER.ColliderDesc.trimesh(vertices, indices)
           : RAPIER.ColliderDesc.convexHull(vertices);
       colDesc = built ?? RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);

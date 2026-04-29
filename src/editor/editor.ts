@@ -8,6 +8,9 @@ import type { AssetRegistry } from '../world/registry';
 import { History } from './history';
 import { EditorCameraController } from './cameraController';
 import type { Input } from '../core/input';
+import type { ColliderShape } from '../world/types';
+import type { Inspector } from './inspector';
+import type { PhysicsDebugView } from '../physics/debugView';
 
 export type EditorMode = 'play' | 'edit';
 
@@ -37,6 +40,8 @@ export class Editor {
   private dragStart: { uid: string; pos: Vec3; rot: Vec3; scale: Vec3 } | null = null;
 
   palette: Palette | null = null;
+  inspector: Inspector | null = null;
+  physicsDebug: PhysicsDebugView | null = null;
   onModeChange: ((mode: EditorMode) => void) | null = null;
 
   constructor(
@@ -87,6 +92,7 @@ export class Editor {
     this.mode = mode;
     this.flyCam.enabled = mode === 'edit';
     this.palette?.setVisible(mode === 'edit');
+    this.inspector?.setVisible(mode === 'edit');
     this.onModeChange?.(mode);
     if (mode === 'play') {
       this.deselect();
@@ -105,7 +111,9 @@ export class Editor {
   }
 
   update(dt: number): void {
-    if (this.mode === 'edit') this.flyCam.update(dt, this.input);
+    if (this.mode !== 'edit') return;
+    this.flyCam.update(dt, this.input);
+    this.physicsDebug?.update();
   }
 
   onResize(aspect: number): void {
@@ -172,6 +180,9 @@ export class Editor {
       this.snapEnabled = !this.snapEnabled;
       this.applySnap();
       console.info(`[editor] snap ${this.snapEnabled ? 'on' : 'off'}`);
+    }
+    else if (e.code === 'KeyC') {
+      this.physicsDebug?.toggle();
     }
     else if (e.code === 'Enter' || e.code === 'KeyB') {
       const id = this.palette?.current();
@@ -316,12 +327,39 @@ export class Editor {
     this.gizmo.attach(r.group);
     this.gizmoHelper.visible = true;
     this.gizmo.setMode(this.gizmoMode);
+    this.inspector?.setSelection(r, this.registry.get(r.placement.id) ?? null);
   }
 
   deselect(): void {
     this.selected = null;
     this.gizmo.detach();
     this.gizmoHelper.visible = false;
+    this.inspector?.setSelection(null, null);
+  }
+
+  /** Change the collider for the selected placement (null = use asset default). */
+  changeSelectedCollider(shape: ColliderShape | null): void {
+    if (!this.selected) return;
+    const uid = this.selected.placement.uid;
+    const before = this.selected.placement.collider;
+    if (before === shape || (before === undefined && shape === null)) return;
+
+    const apply = (next: ColliderShape | null): void => {
+      const r = this.levelHandle.rendered.get(uid);
+      if (!r) return;
+      if (next === null) delete r.placement.collider;
+      else r.placement.collider = next;
+      this.levelHandle.updateTransform(uid);
+      if (this.selected?.placement.uid === uid) {
+        this.inspector?.setSelection(r, this.registry.get(r.placement.id) ?? null);
+      }
+    };
+
+    this.history.exec({
+      label: 'collider',
+      do: () => apply(shape),
+      undo: () => apply(before ?? null),
+    });
   }
 
   private setGizmoMode(m: 'translate' | 'rotate' | 'scale'): void {

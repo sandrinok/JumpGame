@@ -70,12 +70,17 @@ window.addEventListener('keydown', (e) => {
 
 let editor: EditorApi | null = null;
 if (import.meta.env.DEV) {
-  const [{ Editor }, { createPalette }] = await Promise.all([
+  const [{ Editor }, { createPalette }, { createInspector }, { PhysicsDebugView }] = await Promise.all([
     import('./editor/editor'),
     import('./editor/palette'),
+    import('./editor/inspector'),
+    import('./physics/debugView'),
   ]);
   const e = new Editor(renderer, scene, camera, levelHandle, registry, input);
   e.palette = createPalette(container, registry);
+  e.inspector = createInspector(container);
+  e.inspector.onColliderChange = (shape) => e.changeSelectedCollider(shape);
+  e.physicsDebug = new PhysicsDebugView(scene, physics);
   editor = e;
 }
 if (editor) {

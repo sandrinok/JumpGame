@@ -62,7 +62,7 @@ export function createPalette(parent: HTMLElement, registry: AssetRegistry): Pal
     Click asset, then Enter or B to place<br>
     G/T translate · R rotate · S scale<br>
     X delete · Ctrl+D duplicate · Esc deselect<br>
-    N toggle snap (0.5m / 15°)<br>
+    N toggle snap (0.5m / 15°) · C toggle colliders<br>
     Ctrl+Z undo · Ctrl+Shift+Z redo<br>
     Ctrl+S save · Ctrl+O load · drag .glb to import
   `;

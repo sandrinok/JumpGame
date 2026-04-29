@@ -9,6 +9,8 @@ export interface Placement {
   /** Euler XYZ in radians */
   rot: Vec3;
   scale: Vec3;
+  /** optional per-placement collider override (gltf assets only) */
+  collider?: ColliderShape;
 }
 
 export interface Level {

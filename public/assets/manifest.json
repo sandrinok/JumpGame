@@ -36,6 +36,17 @@
         "primitive",
         "grass"
       ]
+    },
+    {
+      "id": "low-poly_telephone_booth__game_asset",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/low-poly_telephone_booth__game_asset.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
     }
   ]
 }
