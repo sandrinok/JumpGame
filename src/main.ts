@@ -5,7 +5,7 @@ import { startLoop } from './core/loop';
 import { Input } from './core/input';
 import { addStaticGround, initPhysics } from './physics/world';
 import { createCharacter } from './physics/character';
-import { createPlayer, updatePlayer } from './game/player';
+import { attachCharacterRig, createPlayer, updatePlayer } from './game/player';
 import { buildDevLevel } from './world/devLevel';
 
 const container = document.getElementById('app');
@@ -26,12 +26,15 @@ buildDevLevel(scene, physics);
 
 const character = createCharacter(physics, { x: 0, y: 5, z: 0 });
 const player = createPlayer(scene, character);
+attachCharacterRig(player, '/assets/character/Soldier.glb').catch((e) => {
+  console.warn('Character rig failed to load, using debug capsule:', e);
+});
 
 startLoop(
   (dt) => {
     updatePlayer(player, input, dt, followCam.yaw);
     physics.world.step();
-    followCam.update(input, player.mesh.position);
+    followCam.update(input, player.visualRoot.position);
     input.endFrame();
   },
   () => {

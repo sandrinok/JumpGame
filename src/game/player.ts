@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { CharacterBody } from '../physics/character';
 import type { Input } from '../core/input';
+import { loadCharacterRig, pickState, setState, type CharacterRig } from './character/rig';
 
 const WALK_SPEED = 5;
 const RUN_SPEED = 9;
@@ -16,7 +17,10 @@ const TURN_RATE = 12;
 
 export interface Player {
   body: CharacterBody;
-  mesh: THREE.Mesh;
+  /** debug capsule, hidden when rig is loaded */
+  debugMesh: THREE.Mesh;
+  rig: CharacterRig | null;
+  visualRoot: THREE.Object3D;
   velocity: THREE.Vector3;
   grounded: boolean;
   yaw: number;
@@ -26,13 +30,20 @@ export interface Player {
 }
 
 export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
+  const visualRoot = new THREE.Group();
+  scene.add(visualRoot);
+
   const geo = new THREE.CapsuleGeometry(body.radius, body.halfHeight * 2, 8, 16);
   const mat = new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.7 });
-  const mesh = new THREE.Mesh(geo, mat);
-  scene.add(mesh);
+  const debugMesh = new THREE.Mesh(geo, mat);
+  // capsule center sits at body center; visualRoot sits at body center too
+  visualRoot.add(debugMesh);
+
   return {
     body,
-    mesh,
+    debugMesh,
+    rig: null,
+    visualRoot,
     velocity: new THREE.Vector3(),
     grounded: false,
     yaw: 0,
@@ -40,6 +51,16 @@ export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
     jumpBuffer: 0,
     jumping: false,
   };
+}
+
+export async function attachCharacterRig(player: Player, url: string): Promise<void> {
+  const rig = await loadCharacterRig(url);
+  // model origin is at the feet; offset down by capsule half-height + radius
+  const feetOffset = -(player.body.halfHeight + player.body.radius);
+  rig.root.position.y = feetOffset;
+  player.visualRoot.add(rig.root);
+  player.debugMesh.visible = false;
+  player.rig = rig;
 }
 
 function damp(current: number, target: number, rate: number, dt: number): number {
@@ -98,7 +119,6 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
     player.jumpBuffer = 0;
   }
 
-  // variable jump height: cut upward velocity if Space released early
   if (player.jumping && !input.isDown('Space') && player.velocity.y > JUMP_CUT_VELOCITY) {
     player.velocity.y = JUMP_CUT_VELOCITY;
   }
@@ -121,6 +141,13 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
   player.grounded = body.controller.computedGrounded();
 
   // visual sync
-  player.mesh.position.set(t.x + corrected.x, t.y + corrected.y, t.z + corrected.z);
-  player.mesh.rotation.y = player.yaw;
+  player.visualRoot.position.set(t.x + corrected.x, t.y + corrected.y, t.z + corrected.z);
+  player.visualRoot.rotation.y = player.yaw;
+
+  if (player.rig) {
+    const horizSpeed = Math.hypot(player.velocity.x, player.velocity.z);
+    const next = pickState({ grounded: player.grounded, speed: horizSpeed, runSpeed: RUN_SPEED });
+    setState(player.rig, next);
+    player.rig.mixer.update(dt);
+  }
 }
