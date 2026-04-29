@@ -182,7 +182,8 @@ export class Editor {
       console.info(`[editor] snap ${this.snapEnabled ? 'on' : 'off'}`);
     }
     else if (e.code === 'KeyC') {
-      this.physicsDebug?.toggle();
+      this.physicsDebug?.cycle();
+      console.info(`[editor] collider view: ${this.physicsDebug?.mode}`);
     }
     else if (e.code === 'Enter' || e.code === 'KeyB') {
       const id = this.palette?.current();
