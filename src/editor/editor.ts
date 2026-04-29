@@ -42,6 +42,9 @@ export class Editor {
   private snapEnabled = true;
   /** snapshot of placement transform when a gizmo drag begins */
   private dragStart: { uid: string; pos: Vec3; rot: Vec3; scale: Vec3 } | null = null;
+  private dragStartParams: { uid: string; params: ColliderParams | undefined } | null = null;
+  /** Proxy object the gizmo controls while editing collider params in focus mode. */
+  private colliderProxy: THREE.Object3D | null = null;
 
   physicsDebug: PhysicsDebugView | null = null;
   onModeChange: ((mode: EditorMode) => void) | null = null;
@@ -157,6 +160,11 @@ export class Editor {
     if (this.mode !== 'edit') return;
     this.flyCam.update(dt, this.input);
     this.physicsDebug?.update();
+    // Keep the proxy aligned with current placement+params (e.g. inspector edits)
+    const focus = uiStore.get().colliderFocusUid;
+    if (focus && this.colliderProxy && !(this.gizmo as unknown as { dragging: boolean }).dragging) {
+      this.syncProxyFromPlacement(focus);
+    }
   }
 
   onResize(aspect: number): void {
@@ -305,6 +313,16 @@ export class Editor {
   }
 
   private beginGizmoDrag(): void {
+    const focus = uiStore.get().colliderFocusUid;
+    if (focus) {
+      const r = this.levelHandle.rendered.get(focus);
+      if (!r) return;
+      this.dragStartParams = {
+        uid: focus,
+        params: r.placement.colliderParams ? cloneParams(r.placement.colliderParams) : undefined,
+      };
+      return;
+    }
     if (!this.selected) return;
     const p = this.selected.placement;
     this.dragStart = {
@@ -316,6 +334,29 @@ export class Editor {
   }
 
   private endGizmoDrag(): void {
+    if (this.dragStartParams) {
+      const start = this.dragStartParams;
+      this.dragStartParams = null;
+      const r = this.levelHandle.rendered.get(start.uid);
+      if (!r) return;
+      const after = r.placement.colliderParams ? cloneParams(r.placement.colliderParams) : undefined;
+      const before = start.params;
+      const apply = (params: ColliderParams | undefined): void => {
+        const live = this.levelHandle.rendered.get(start.uid);
+        if (!live) return;
+        if (params === undefined) delete live.placement.colliderParams;
+        else live.placement.colliderParams = cloneParams(params);
+        this.levelHandle.updateTransform(start.uid);
+        if (uiStore.get().colliderFocusUid === start.uid) this.syncProxyFromPlacement(start.uid);
+        uiStore.bumpSelection();
+      };
+      this.history.record({
+        label: 'collider gizmo',
+        do: () => apply(after),
+        undo: () => apply(before),
+      });
+      return;
+    }
     if (!this.dragStart || !this.selected) {
       this.dragStart = null;
       return;
@@ -638,6 +679,16 @@ export class Editor {
     this.flyCam.syncFromCamera();
     this.editorOrthoCamera.position.copy(this.editorCamera.position);
     this.editorOrthoCamera.quaternion.copy(this.editorCamera.quaternion);
+
+    // Build collider proxy that the gizmo will edit instead of the placement
+    this.colliderProxy = new THREE.Object3D();
+    this.colliderProxy.userData.colliderProxy = true;
+    this.syncProxyFromPlacement(uid);
+    (this.colliderProxy.parent ?? null) || (this as { editorScene?: THREE.Scene });
+    // Add to gizmo's scene (gizmo's scene is the same as gizmoHelper's scene, which we attached at construction)
+    this.gizmoHelper.parent?.add(this.colliderProxy);
+    this.gizmo.attach(this.colliderProxy);
+    this.gizmoHelper.visible = true;
   }
 
   exitColliderFocus(): void {
@@ -648,6 +699,95 @@ export class Editor {
       r.group.visible = !hidden.has(uid);
     }
     uiStore.set({ colliderFocusUid: null });
+
+    // Tear down proxy + restore gizmo target to placement (if still selected & unlocked)
+    if (this.colliderProxy) {
+      this.gizmo.detach();
+      this.colliderProxy.parent?.remove(this.colliderProxy);
+      this.colliderProxy = null;
+    }
+    if (this.selected && !uiStore.get().locked.has(this.selected.placement.uid)) {
+      this.gizmo.attach(this.selected.group);
+      this.gizmoHelper.visible = true;
+    } else {
+      this.gizmoHelper.visible = false;
+    }
+  }
+
+  /** Position the proxy so it represents the current effective collider transform. */
+  private syncProxyFromPlacement(uid: string): void {
+    if (!this.colliderProxy) return;
+    const r = this.levelHandle.rendered.get(uid);
+    if (!r) return;
+    const asset = this.registry.get(r.placement.id);
+    if (!asset) return;
+
+    const p = r.placement;
+    const params = p.colliderParams ?? {};
+
+    const bboxSize = new THREE.Vector3();
+    const bboxCenter = new THREE.Vector3();
+    if (asset.def.kind === 'gltf') {
+      asset.bbox.getSize(bboxSize);
+      asset.bbox.getCenter(bboxCenter);
+    } else {
+      bboxSize.set(1, 1, 1);
+      bboxCenter.set(0, 0, 0);
+    }
+
+    const offset = new THREE.Vector3(
+      params.offset?.[0] ?? bboxCenter.x * p.scale[0],
+      params.offset?.[1] ?? bboxCenter.y * p.scale[1],
+      params.offset?.[2] ?? bboxCenter.z * p.scale[2],
+    );
+    const size = new THREE.Vector3(
+      params.size?.[0] ?? bboxSize.x * p.scale[0],
+      params.size?.[1] ?? bboxSize.y * p.scale[1],
+      params.size?.[2] ?? bboxSize.z * p.scale[2],
+    );
+    const localQ = params.rot
+      ? new THREE.Quaternion().setFromEuler(new THREE.Euler(params.rot[0], params.rot[1], params.rot[2], 'XYZ'))
+      : new THREE.Quaternion();
+
+    const placeQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.rot[0], p.rot[1], p.rot[2], 'XYZ'));
+
+    // World position = placement.pos + placementRotation * offset
+    const worldPos = offset.clone().applyQuaternion(placeQ).add(new THREE.Vector3(p.pos[0], p.pos[1], p.pos[2]));
+    const worldQuat = placeQ.clone().multiply(localQ);
+
+    this.colliderProxy.position.copy(worldPos);
+    this.colliderProxy.quaternion.copy(worldQuat);
+    this.colliderProxy.scale.copy(size);
+    this.colliderProxy.updateMatrixWorld(true);
+  }
+
+  /** Read the proxy and write computed colliderParams onto the placement. */
+  private writeProxyToColliderParams(uid: string): void {
+    if (!this.colliderProxy) return;
+    const r = this.levelHandle.rendered.get(uid);
+    if (!r) return;
+    const p = r.placement;
+    const placeQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(p.rot[0], p.rot[1], p.rot[2], 'XYZ'));
+    const placeQinv = placeQ.clone().invert();
+
+    // offset (placement-local)
+    const worldOffset = this.colliderProxy.position.clone().sub(new THREE.Vector3(p.pos[0], p.pos[1], p.pos[2]));
+    const localOffset = worldOffset.applyQuaternion(placeQinv);
+
+    // local rotation
+    const localQ = placeQinv.clone().multiply(this.colliderProxy.quaternion);
+    const e = new THREE.Euler().setFromQuaternion(localQ, 'XYZ');
+
+    // size = proxy scale (already world dimensions)
+    const sz = this.colliderProxy.scale;
+
+    p.colliderParams = {
+      offset: [localOffset.x, localOffset.y, localOffset.z],
+      size: [sz.x, sz.y, sz.z],
+      rot: [e.x, e.y, e.z],
+    };
+    this.levelHandle.updateTransform(uid);
+    uiStore.bumpSelection();
   }
 
   toggleLocked(uid: string): void {
@@ -699,6 +839,11 @@ export class Editor {
   }
 
   private onGizmoChange(): void {
+    const focus = uiStore.get().colliderFocusUid;
+    if (focus && this.colliderProxy) {
+      this.writeProxyToColliderParams(focus);
+      return;
+    }
     if (!this.selected) return;
     const r = this.selected;
     const p = r.placement;
@@ -718,4 +863,12 @@ function sameParams(a: ColliderParams | undefined, b: ColliderParams | undefined
   if (!a || !b) return false;
   const k = (v?: Vec3) => (v ? v.join(',') : '_');
   return k(a.offset) === k(b.offset) && k(a.size) === k(b.size) && k(a.rot) === k(b.rot);
+}
+
+function cloneParams(p: ColliderParams): ColliderParams {
+  return {
+    offset: p.offset ? ([...p.offset] as Vec3) : undefined,
+    size: p.size ? ([...p.size] as Vec3) : undefined,
+    rot: p.rot ? ([...p.rot] as Vec3) : undefined,
+  };
 }
