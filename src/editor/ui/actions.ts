@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { ColliderParams, ColliderShape } from '../../world/types';
 import type { DebugMode } from '../../physics/debugView';
+import type { ViewName } from '../cameraController';
 
 export interface EditorActions {
   selectPaletteId(id: string | null): void;
@@ -27,6 +28,9 @@ export interface EditorActions {
   selectByUid(uid: string): void;
   toggleHidden(uid: string): void;
   toggleLocked(uid: string): void;
+  // camera
+  snapView(view: ViewName): void;
+  toggleOrtho(): void;
 }
 
 const noop: EditorActions = {
@@ -50,6 +54,8 @@ const noop: EditorActions = {
   selectByUid: () => undefined,
   toggleHidden: () => undefined,
   toggleLocked: () => undefined,
+  snapView: () => undefined,
+  toggleOrtho: () => undefined,
 };
 
 export const EditorActionsContext = createContext<EditorActions>(noop);

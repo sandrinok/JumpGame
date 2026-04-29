@@ -47,6 +47,28 @@
       "tags": [
         "imported"
       ]
+    },
+    {
+      "id": "shvan_92_ambulance_-_low_poly_model",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/shvan_92_ambulance_-_low_poly_model.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "ambulance_shvan_92",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/ambulance_shvan_92.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
     }
   ]
 }

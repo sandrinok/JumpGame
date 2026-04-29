@@ -18,7 +18,7 @@ type EditorMode = 'play' | 'edit';
 
 interface EditorApi {
   mode: EditorMode;
-  activeCamera: import('three').PerspectiveCamera;
+  activeCamera: import('three').PerspectiveCamera | import('three').OrthographicCamera;
   update(dt: number): void;
   onResize(aspect: number): void;
   onModeChange: ((mode: EditorMode) => void) | null;

@@ -92,10 +92,23 @@ export function Topbar(): JSX.Element {
             <MenubarSub>
               <MenubarSubTrigger>Camera</MenubarSubTrigger>
               <MenubarSubContent>
-                <MenubarItem disabled>Top (coming in C29)</MenubarItem>
-                <MenubarItem disabled>Front</MenubarItem>
-                <MenubarItem disabled>Side</MenubarItem>
-                <MenubarItem disabled>Perspective</MenubarItem>
+                <MenubarItem onSelect={() => a.snapView('top')}>
+                  Top <MenubarShortcut>Num 7</MenubarShortcut>
+                </MenubarItem>
+                <MenubarItem onSelect={() => a.snapView('front')}>
+                  Front <MenubarShortcut>Num 1</MenubarShortcut>
+                </MenubarItem>
+                <MenubarItem onSelect={() => a.snapView('right')}>
+                  Side (Right) <MenubarShortcut>Num 3</MenubarShortcut>
+                </MenubarItem>
+                <MenubarSeparator />
+                <MenubarItem onSelect={() => a.snapView('bottom')}>Bottom <MenubarShortcut>Ctrl Num 7</MenubarShortcut></MenubarItem>
+                <MenubarItem onSelect={() => a.snapView('back')}>Back <MenubarShortcut>Ctrl Num 1</MenubarShortcut></MenubarItem>
+                <MenubarItem onSelect={() => a.snapView('left')}>Left <MenubarShortcut>Ctrl Num 3</MenubarShortcut></MenubarItem>
+                <MenubarSeparator />
+                <MenubarItem onSelect={a.toggleOrtho}>
+                  Toggle Orthographic <MenubarShortcut>Num 5</MenubarShortcut>
+                </MenubarItem>
               </MenubarSubContent>
             </MenubarSub>
             <MenubarSeparator />

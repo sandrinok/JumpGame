@@ -5,7 +5,7 @@ import type { Placement, Vec3 } from '../world/types';
 import { loadLevelFromDisk, saveLevel, saveLevelAs } from '../persistence/levelFile';
 import type { AssetRegistry } from '../world/registry';
 import { History } from './history';
-import { EditorCameraController } from './cameraController';
+import { EditorCameraController, type ViewName } from './cameraController';
 import type { Input } from '../core/input';
 import type { ColliderShape, ColliderParams } from '../world/types';
 import type { PhysicsDebugView } from '../physics/debugView';
@@ -24,9 +24,13 @@ const TRANSLATE_SNAP = 0.5;
 const ROTATE_SNAP_DEG = 15;
 const SCALE_SNAP = 0.1;
 
+const ORTHO_FRUSTUM = 20;
+
 export class Editor {
   mode: EditorMode = 'play';
   editorCamera: THREE.PerspectiveCamera;
+  editorOrthoCamera: THREE.OrthographicCamera;
+  private useOrtho = false;
   private flyCam: EditorCameraController;
   private gizmo: TransformControls;
   private gizmoHelper: THREE.Object3D;
@@ -53,6 +57,15 @@ export class Editor {
     this.editorCamera = new THREE.PerspectiveCamera(60, gameCamera.aspect, 0.1, 1000);
     this.editorCamera.position.set(15, 15, 15);
     this.editorCamera.lookAt(0, 0, 0);
+
+    const aspect = gameCamera.aspect;
+    this.editorOrthoCamera = new THREE.OrthographicCamera(
+      -ORTHO_FRUSTUM * aspect, ORTHO_FRUSTUM * aspect,
+      ORTHO_FRUSTUM, -ORTHO_FRUSTUM,
+      -1000, 1000,
+    );
+    this.editorOrthoCamera.position.copy(this.editorCamera.position);
+    this.editorOrthoCamera.quaternion.copy(this.editorCamera.quaternion);
 
     this.flyCam = new EditorCameraController(this.editorCamera, renderer.domElement);
     this.flyCam.syncFromCamera();
@@ -84,8 +97,38 @@ export class Editor {
     dropTarget.addEventListener('drop', (e) => this.onDrop(e));
   }
 
-  get activeCamera(): THREE.PerspectiveCamera {
-    return this.mode === 'edit' ? this.editorCamera : this.gameCamera;
+  get activeCamera(): THREE.PerspectiveCamera | THREE.OrthographicCamera {
+    if (this.mode !== 'edit') return this.gameCamera;
+    return this.useOrtho ? this.editorOrthoCamera : this.editorCamera;
+  }
+
+  setOrtho(useOrtho: boolean): void {
+    if (this.useOrtho === useOrtho) return;
+    this.useOrtho = useOrtho;
+    const cam = useOrtho ? this.editorOrthoCamera : this.editorCamera;
+    // Sync the inactive cam to keep it in lockstep on next toggle
+    if (useOrtho) {
+      this.editorOrthoCamera.position.copy(this.editorCamera.position);
+      this.editorOrthoCamera.quaternion.copy(this.editorCamera.quaternion);
+    } else {
+      this.editorCamera.position.copy(this.editorOrthoCamera.position);
+      this.editorCamera.quaternion.copy(this.editorOrthoCamera.quaternion);
+    }
+    this.flyCam.setCamera(cam);
+    (this.gizmo as unknown as { camera: THREE.Camera }).camera = cam;
+  }
+
+  toggleOrtho(): void {
+    this.setOrtho(!this.useOrtho);
+  }
+
+  snapView(view: ViewName): void {
+    this.flyCam.snapToView(view);
+    // sync the other camera too so toggling ortho/persp keeps the view
+    const src = this.useOrtho ? this.editorOrthoCamera : this.editorCamera;
+    const dst = this.useOrtho ? this.editorCamera : this.editorOrthoCamera;
+    dst.position.copy(src.position);
+    dst.quaternion.copy(src.quaternion);
   }
 
   setMode(mode: EditorMode): void {
@@ -119,6 +162,9 @@ export class Editor {
   onResize(aspect: number): void {
     this.editorCamera.aspect = aspect;
     this.editorCamera.updateProjectionMatrix();
+    this.editorOrthoCamera.left = -ORTHO_FRUSTUM * aspect;
+    this.editorOrthoCamera.right = ORTHO_FRUSTUM * aspect;
+    this.editorOrthoCamera.updateProjectionMatrix();
   }
 
   private applySnap(): void {
@@ -183,6 +229,10 @@ export class Editor {
       this.physicsDebug?.cycle();
       uiStore.set({ colliderView: this.physicsDebug?.mode ?? 'off' });
     }
+    else if (e.code === 'Numpad1') this.snapView(e.ctrlKey ? 'back' : 'front');
+    else if (e.code === 'Numpad3') this.snapView(e.ctrlKey ? 'left' : 'right');
+    else if (e.code === 'Numpad7') this.snapView(e.ctrlKey ? 'bottom' : 'top');
+    else if (e.code === 'Numpad5') this.toggleOrtho();
     else if (e.code === 'Enter' || e.code === 'KeyB') {
       const id = uiStore.get().paletteCurrent;
       if (id) this.placeAtCursor(id);
@@ -190,9 +240,10 @@ export class Editor {
   }
 
   placeAtCursor(assetId: string): void {
+    const cam = this.activeCamera;
     const target = new THREE.Vector3();
-    this.editorCamera.getWorldDirection(target);
-    target.multiplyScalar(8).add(this.editorCamera.position);
+    cam.getWorldDirection(target);
+    target.multiplyScalar(8).add(cam.position);
     const p: Placement = {
       id: assetId,
       uid: nextUid(),
@@ -311,7 +362,7 @@ export class Editor {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    this.raycaster.setFromCamera(this.pointer, this.editorCamera);
+    this.raycaster.setFromCamera(this.pointer, this.activeCamera);
 
     const groups = [...this.levelHandle.rendered.values()].map((r) => r.group);
     const hits = this.raycaster.intersectObjects(groups, true);
@@ -384,6 +435,8 @@ export class Editor {
       selectByUid: (uid) => this.selectByUid(uid),
       toggleHidden: (uid) => this.toggleHidden(uid),
       toggleLocked: (uid) => this.toggleLocked(uid),
+      snapView: (v) => this.snapView(v),
+      toggleOrtho: () => this.toggleOrtho(),
     };
   }
 

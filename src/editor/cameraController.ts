@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Input } from '../core/input';
 
+export type ViewName = 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
+
 const MOUSE_SENS = 0.0025;
 const MIN_PITCH = -Math.PI / 2 + 0.05;
 const MAX_PITCH = Math.PI / 2 - 0.05;
@@ -70,6 +72,31 @@ export class EditorCameraController {
     const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
     this.yaw = e.y;
     this.pitch = e.x;
+  }
+
+  /** Switch which camera the controller drives (e.g. perspective ↔ ortho). */
+  setCamera(camera: THREE.PerspectiveCamera | THREE.OrthographicCamera): void {
+    this.camera = camera as THREE.PerspectiveCamera;
+    this.syncFromCamera();
+  }
+
+  /** Snap to a canonical axis-aligned view, looking at the world origin. */
+  snapToView(view: ViewName, distance = 25): void {
+    const eyes: Record<ViewName, [number, number, number, number, number]> = {
+      // [posX, posY, posZ, yaw, pitch]
+      front:  [0, 0, distance, 0, 0],
+      back:   [0, 0, -distance, Math.PI, 0],
+      right:  [distance, 0, 0, Math.PI / 2, 0],
+      left:   [-distance, 0, 0, -Math.PI / 2, 0],
+      top:    [0, distance, 0, 0, -Math.PI / 2 + 0.01],
+      bottom: [0, -distance, 0, 0, Math.PI / 2 - 0.01],
+    };
+    const [x, y, z, yaw, pitch] = eyes[view];
+    this.camera.position.set(x, y, z);
+    this.yaw = yaw;
+    this.pitch = pitch;
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
+    this.camera.quaternion.copy(q);
   }
 
   private beginLook(): void {
