@@ -53,6 +53,19 @@ export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
   };
 }
 
+export function respawnPlayer(player: Player, pos: [number, number, number], yaw: number): void {
+  player.body.body.setNextKinematicTranslation({ x: pos[0], y: pos[1], z: pos[2] });
+  player.body.body.setTranslation({ x: pos[0], y: pos[1], z: pos[2] }, true);
+  player.velocity.set(0, 0, 0);
+  player.yaw = yaw;
+  player.grounded = false;
+  player.coyote = 0;
+  player.jumpBuffer = 0;
+  player.jumping = false;
+  player.visualRoot.position.set(pos[0], pos[1], pos[2]);
+  player.visualRoot.rotation.y = yaw;
+}
+
 export async function attachCharacterRig(player: Player, url: string): Promise<void> {
   const rig = await loadCharacterRig(url);
   // model origin is at the feet; offset down by capsule half-height + radius
