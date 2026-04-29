@@ -2,8 +2,16 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { LevelHandle, RenderedPlacement } from '../world/level';
+import type { Palette } from './palette';
+import type { Placement } from '../world/types';
 
 export type EditorMode = 'play' | 'edit';
+
+let uidCounter = 0;
+function nextUid(): string {
+  uidCounter++;
+  return `e${Date.now().toString(36)}_${uidCounter}`;
+}
 
 export class Editor {
   mode: EditorMode = 'play';
@@ -15,6 +23,7 @@ export class Editor {
   private pointer = new THREE.Vector2();
   private selected: RenderedPlacement | null = null;
   private gizmoMode: 'translate' | 'rotate' | 'scale' = 'translate';
+  palette: Palette | null = null;
 
   constructor(
     private renderer: THREE.WebGLRenderer,
@@ -52,6 +61,7 @@ export class Editor {
     if (this.mode === mode) return;
     this.mode = mode;
     this.orbit.enabled = mode === 'edit';
+    this.palette?.setVisible(mode === 'edit');
     if (mode === 'play') {
       this.deselect();
       if (document.pointerLockElement) document.exitPointerLock();
@@ -89,6 +99,43 @@ export class Editor {
     else if (e.code === 'KeyS' && !e.ctrlKey && !e.metaKey) this.setGizmoMode('scale');
     else if (e.code === 'Delete' || e.code === 'KeyX') this.deleteSelected();
     else if (e.code === 'Escape') this.deselect();
+    else if (e.code === 'KeyD' && (e.ctrlKey || e.metaKey)) {
+      this.duplicateSelected();
+      e.preventDefault();
+    }
+    else if ((e.code === 'Enter' || e.code === 'KeyB') && this.palette) {
+      const id = this.palette.current();
+      if (id) this.placeAtCursor(id);
+    }
+  }
+
+  private placeAtCursor(assetId: string): void {
+    const target = new THREE.Vector3();
+    this.editorCamera.getWorldDirection(target);
+    target.multiplyScalar(8).add(this.editorCamera.position);
+    const p: Placement = {
+      id: assetId,
+      uid: nextUid(),
+      pos: [target.x, target.y, target.z],
+      rot: [0, 0, 0],
+      scale: [1, 1, 1],
+    };
+    const r = this.levelHandle.addPlacement(p);
+    if (r) this.select(r);
+  }
+
+  private duplicateSelected(): void {
+    if (!this.selected) return;
+    const src = this.selected.placement;
+    const p: Placement = {
+      id: src.id,
+      uid: nextUid(),
+      pos: [src.pos[0] + 1, src.pos[1], src.pos[2]],
+      rot: [...src.rot] as [number, number, number],
+      scale: [...src.scale] as [number, number, number],
+    };
+    const r = this.levelHandle.addPlacement(p);
+    if (r) this.select(r);
   }
 
   private setGizmoMode(m: 'translate' | 'rotate' | 'scale'): void {

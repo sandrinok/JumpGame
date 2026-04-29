@@ -11,6 +11,7 @@ import { instantiate, loadLevel } from './world/level';
 import { createHud } from './ui/hud';
 import { loadScore, saveScore } from './persistence/score';
 import { Editor } from './editor/editor';
+import { createPalette } from './editor/palette';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app not found');
@@ -47,6 +48,7 @@ hud.setBest(score.name, score.best);
 let runMaxHeight = 0;
 
 const editor = new Editor(renderer, scene, camera, levelHandle);
+editor.palette = createPalette(container, registry);
 
 handleResize(renderer, camera, container);
 window.addEventListener('resize', () => {
