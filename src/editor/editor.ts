@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { LevelHandle, RenderedPlacement } from '../world/level';
-import type { Palette } from './palette';
 import type { Placement, Vec3 } from '../world/types';
 import { loadLevelFromDisk, saveLevel, saveLevelAs } from '../persistence/levelFile';
 import type { AssetRegistry } from '../world/registry';
@@ -9,8 +8,9 @@ import { History } from './history';
 import { EditorCameraController } from './cameraController';
 import type { Input } from '../core/input';
 import type { ColliderShape, ColliderParams } from '../world/types';
-import type { Inspector } from './inspector';
 import type { PhysicsDebugView } from '../physics/debugView';
+import { uiStore } from './ui/uiStore';
+import type { EditorActions } from './ui/actions';
 
 export type EditorMode = 'play' | 'edit';
 
@@ -39,8 +39,6 @@ export class Editor {
   /** snapshot of placement transform when a gizmo drag begins */
   private dragStart: { uid: string; pos: Vec3; rot: Vec3; scale: Vec3 } | null = null;
 
-  palette: Palette | null = null;
-  inspector: Inspector | null = null;
   physicsDebug: PhysicsDebugView | null = null;
   onModeChange: ((mode: EditorMode) => void) | null = null;
 
@@ -71,6 +69,8 @@ export class Editor {
     scene.add(this.gizmoHelper);
     this.gizmoHelper.visible = false;
 
+    this.refreshAssets();
+
     window.addEventListener('keydown', (e) => this.onKeyDown(e));
     renderer.domElement.addEventListener('pointerdown', (e) => this.onPointerDown(e));
 
@@ -91,8 +91,7 @@ export class Editor {
     if (this.mode === mode) return;
     this.mode = mode;
     this.flyCam.enabled = mode === 'edit';
-    this.palette?.setVisible(mode === 'edit');
-    this.inspector?.setVisible(mode === 'edit');
+    uiStore.set({ visible: mode === 'edit' });
     this.onModeChange?.(mode);
     if (mode === 'play') {
       this.deselect();
@@ -186,7 +185,7 @@ export class Editor {
       console.info(`[editor] collider view: ${this.physicsDebug?.mode}`);
     }
     else if (e.code === 'Enter' || e.code === 'KeyB') {
-      const id = this.palette?.current();
+      const id = uiStore.get().paletteCurrent;
       if (id) this.placeAtCursor(id);
     }
   }
@@ -328,14 +327,32 @@ export class Editor {
     this.gizmo.attach(r.group);
     this.gizmoHelper.visible = true;
     this.gizmo.setMode(this.gizmoMode);
-    this.inspector?.setSelection(r, this.registry.get(r.placement.id) ?? null);
+    uiStore.set({
+      selection: r,
+      selectionAsset: this.registry.get(r.placement.id) ?? null,
+    });
   }
 
   deselect(): void {
     this.selected = null;
     this.gizmo.detach();
     this.gizmoHelper.visible = false;
-    this.inspector?.setSelection(null, null);
+    uiStore.set({ selection: null, selectionAsset: null });
+  }
+
+  /** Update uiStore with the current registry contents. */
+  refreshAssets(): void {
+    uiStore.set({ assets: this.registry.all() });
+  }
+
+  /** Read-only snapshot of action handlers for the React UI. */
+  getActions(): EditorActions {
+    return {
+      selectPaletteId: (id) => uiStore.set({ paletteCurrent: id }),
+      placeAtCursor: (id) => this.placeAtCursor(id),
+      changeCollider: (shape) => this.changeSelectedCollider(shape),
+      changeColliderParams: (params) => this.changeSelectedColliderParams(params),
+    };
   }
 
   /** Change the collider transform overrides for the selected placement. null clears all overrides. */
@@ -352,7 +369,7 @@ export class Editor {
       else r.placement.colliderParams = params;
       this.levelHandle.updateTransform(uid);
       if (this.selected?.placement.uid === uid) {
-        this.inspector?.setSelection(r, this.registry.get(r.placement.id) ?? null);
+        uiStore.bumpSelection();
       }
     };
 
@@ -381,7 +398,7 @@ export class Editor {
       else r.placement.collider = next;
       this.levelHandle.updateTransform(uid);
       if (this.selected?.placement.uid === uid) {
-        this.inspector?.setSelection(r, this.registry.get(r.placement.id) ?? null);
+        uiStore.bumpSelection();
       }
     };
 
@@ -411,8 +428,8 @@ export class Editor {
       const id = this.makeAssetId(f.name);
       try {
         await this.registry.addGltfFromArrayBuffer(id, buf, 'trimesh');
-        this.palette?.refresh();
-        this.palette?.selectById(id);
+        this.refreshAssets();
+        uiStore.set({ paletteCurrent: id });
         console.info(`[editor] imported ${f.name} as "${id}" (session-only)`);
       } catch (err) {
         console.error('[editor] import failed:', err);

@@ -70,19 +70,23 @@ window.addEventListener('keydown', (e) => {
 
 let editor: EditorApi | null = null;
 if (import.meta.env.DEV) {
-  const [{ Editor }, { createPalette }, { createInspector }, { PhysicsDebugView }] = await Promise.all([
+  const [{ Editor }, { PhysicsDebugView }, react, reactDom, { EditorRoot }] = await Promise.all([
     import('./editor/editor'),
-    import('./editor/palette'),
-    import('./editor/inspector'),
     import('./physics/debugView'),
+    import('react'),
+    import('react-dom/client'),
+    import('./editor/ui/EditorRoot'),
+    import('./editor.css'),
   ]);
   const e = new Editor(renderer, scene, camera, levelHandle, registry, input);
-  e.palette = createPalette(container, registry);
-  e.inspector = createInspector(container);
-  e.inspector.onColliderChange = (shape) => e.changeSelectedCollider(shape);
-  e.inspector.onColliderParamsChange = (params) => e.changeSelectedColliderParams(params);
   e.physicsDebug = new PhysicsDebugView(scene, physics);
   editor = e;
+
+  const uiHost = document.createElement('div');
+  uiHost.id = 'editor-ui';
+  container.appendChild(uiHost);
+  const root = reactDom.createRoot(uiHost);
+  root.render(react.createElement(EditorRoot, { actions: e.getActions() }));
 }
 if (editor) {
   editor.onModeChange = (mode) => {

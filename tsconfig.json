@@ -16,7 +16,8 @@
     "skipLibCheck": true,
     "useDefineForClassFields": true,
     "allowImportingTsExtensions": false,
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-jsx"
   },
   "include": ["src"]
 }
