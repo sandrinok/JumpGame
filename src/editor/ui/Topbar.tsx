@@ -1,0 +1,135 @@
+import { useRef } from 'react';
+import {
+  Menubar,
+  MenubarMenu,
+  MenubarTrigger,
+  MenubarContent,
+  MenubarItem,
+  MenubarSeparator,
+  MenubarShortcut,
+  MenubarSub,
+  MenubarSubTrigger,
+  MenubarSubContent,
+  MenubarCheckboxItem,
+} from './components/menubar';
+import { useEditorActions } from './actions';
+import { useEditorUi } from './useEditorUi';
+import type { DebugMode } from '../../physics/debugView';
+
+const COLLIDER_LABELS: Array<[DebugMode, string]> = [
+  ['off', 'Off'],
+  ['wire', 'Wireframe'],
+  ['solid', 'Solid'],
+  ['both', 'Both'],
+];
+
+export function Topbar(): JSX.Element {
+  const a = useEditorActions();
+  const ui = useEditorUi();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const triggerImport = (): void => fileInputRef.current?.click();
+  const onFileChosen = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const files = e.currentTarget.files;
+    if (!files) return;
+    await a.importGlbs(Array.from(files));
+    e.currentTarget.value = '';
+  };
+
+  return (
+    <div className="absolute top-3 left-3 flex items-center gap-2">
+      <Menubar>
+        <MenubarMenu>
+          <MenubarTrigger>File</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem onSelect={a.newLevel}>New <MenubarShortcut>—</MenubarShortcut></MenubarItem>
+            <MenubarItem onSelect={a.openLevel}>Open… <MenubarShortcut>Ctrl O</MenubarShortcut></MenubarItem>
+            <MenubarSeparator />
+            <MenubarItem onSelect={a.saveLevel}>Save <MenubarShortcut>Ctrl S</MenubarShortcut></MenubarItem>
+            <MenubarItem onSelect={a.saveLevelAs}>Save As… <MenubarShortcut>Ctrl ⇧ S</MenubarShortcut></MenubarItem>
+            <MenubarSeparator />
+            <MenubarItem onSelect={triggerImport}>Import GLB…</MenubarItem>
+            <MenubarSeparator />
+            <MenubarItem onSelect={a.exitEditor}>Exit Editor <MenubarShortcut>F1</MenubarShortcut></MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
+
+        <MenubarMenu>
+          <MenubarTrigger>Edit</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem onSelect={a.undo}>Undo <MenubarShortcut>Ctrl Z</MenubarShortcut></MenubarItem>
+            <MenubarItem onSelect={a.redo}>Redo <MenubarShortcut>Ctrl ⇧ Z</MenubarShortcut></MenubarItem>
+            <MenubarSeparator />
+            <MenubarItem onSelect={a.duplicateSelected} disabled={!ui.selection}>
+              Duplicate <MenubarShortcut>Ctrl D</MenubarShortcut>
+            </MenubarItem>
+            <MenubarItem onSelect={a.deleteSelected} disabled={!ui.selection}>
+              Delete <MenubarShortcut>X</MenubarShortcut>
+            </MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
+
+        <MenubarMenu>
+          <MenubarTrigger>View</MenubarTrigger>
+          <MenubarContent>
+            <MenubarSub>
+              <MenubarSubTrigger>Collision</MenubarSubTrigger>
+              <MenubarSubContent>
+                {COLLIDER_LABELS.map(([mode, label]) => (
+                  <MenubarCheckboxItem
+                    key={mode}
+                    checked={ui.colliderView === mode}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      a.setColliderView(mode);
+                    }}
+                  >
+                    {label}
+                  </MenubarCheckboxItem>
+                ))}
+              </MenubarSubContent>
+            </MenubarSub>
+            <MenubarSub>
+              <MenubarSubTrigger>Camera</MenubarSubTrigger>
+              <MenubarSubContent>
+                <MenubarItem disabled>Top (coming in C29)</MenubarItem>
+                <MenubarItem disabled>Front</MenubarItem>
+                <MenubarItem disabled>Side</MenubarItem>
+                <MenubarItem disabled>Perspective</MenubarItem>
+              </MenubarSubContent>
+            </MenubarSub>
+            <MenubarSeparator />
+            <MenubarCheckboxItem
+              checked={ui.snapEnabled}
+              onSelect={(e) => {
+                e.preventDefault();
+                a.setSnap(!ui.snapEnabled);
+              }}
+            >
+              Snap (0.5m / 15°)
+              <MenubarShortcut>N</MenubarShortcut>
+            </MenubarCheckboxItem>
+          </MenubarContent>
+        </MenubarMenu>
+
+        <MenubarMenu>
+          <MenubarTrigger>Help</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem disabled>Version 0.1</MenubarItem>
+            <MenubarItem disabled>F1 toggles editor</MenubarItem>
+            <MenubarItem disabled>RMB + WASD/QE = fly cam</MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
+      </Menubar>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
+        multiple
+        className="hidden"
+        onChange={onFileChosen}
+      />
+    </div>
+  );
+}

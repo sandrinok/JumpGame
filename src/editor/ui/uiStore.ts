@@ -1,5 +1,6 @@
 import type { ResolvedAsset } from '../../world/registry';
 import type { RenderedPlacement } from '../../world/level';
+import type { DebugMode } from '../../physics/debugView';
 
 /**
  * Editor UI state shared between the (TS) Editor controller and the (React)
@@ -17,6 +18,8 @@ export interface EditorUiState {
   selectionAsset: ResolvedAsset | null;
   /** Force re-render seed when placement transform mutates externally */
   selectionVersion: number;
+  snapEnabled: boolean;
+  colliderView: DebugMode;
 }
 
 export type Listener = () => void;
@@ -28,6 +31,8 @@ const initial: EditorUiState = {
   selection: null,
   selectionAsset: null,
   selectionVersion: 0,
+  snapEnabled: true,
+  colliderView: 'off',
 };
 
 let state: EditorUiState = initial;

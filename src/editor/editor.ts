@@ -176,13 +176,11 @@ export class Editor {
     else if (e.code === 'Delete' || e.code === 'KeyX') this.deleteSelected();
     else if (e.code === 'Escape') this.deselect();
     else if (e.code === 'KeyN') {
-      this.snapEnabled = !this.snapEnabled;
-      this.applySnap();
-      console.info(`[editor] snap ${this.snapEnabled ? 'on' : 'off'}`);
+      this.setSnap(!this.snapEnabled);
     }
     else if (e.code === 'KeyC') {
       this.physicsDebug?.cycle();
-      console.info(`[editor] collider view: ${this.physicsDebug?.mode}`);
+      uiStore.set({ colliderView: this.physicsDebug?.mode ?? 'off' });
     }
     else if (e.code === 'Enter' || e.code === 'KeyB') {
       const id = uiStore.get().paletteCurrent;
@@ -190,7 +188,7 @@ export class Editor {
     }
   }
 
-  private placeAtCursor(assetId: string): void {
+  placeAtCursor(assetId: string): void {
     const target = new THREE.Vector3();
     this.editorCamera.getWorldDirection(target);
     target.multiplyScalar(8).add(this.editorCamera.position);
@@ -204,7 +202,7 @@ export class Editor {
     this.execAdd(p);
   }
 
-  private duplicateSelected(): void {
+  duplicateSelected(): void {
     if (!this.selected) return;
     const src = this.selected.placement;
     const p: Placement = {
@@ -231,7 +229,7 @@ export class Editor {
     });
   }
 
-  private deleteSelected(): void {
+  deleteSelected(): void {
     if (!this.selected) return;
     const p = this.selected.placement;
     this.deselect();
@@ -352,6 +350,18 @@ export class Editor {
       placeAtCursor: (id) => this.placeAtCursor(id),
       changeCollider: (shape) => this.changeSelectedCollider(shape),
       changeColliderParams: (params) => this.changeSelectedColliderParams(params),
+      newLevel: () => this.newLevel(),
+      openLevel: () => void this.openLevel(),
+      saveLevel: () => this.saveLevel(),
+      saveLevelAs: () => this.saveLevelAs(),
+      importGlbs: (files) => this.importGlbFiles(files),
+      undo: () => this.undo(),
+      redo: () => this.redo(),
+      duplicateSelected: () => this.duplicateSelected(),
+      deleteSelected: () => this.deleteSelected(),
+      setColliderView: (m) => this.setColliderView(m),
+      setSnap: (v) => this.setSnap(v),
+      exitEditor: () => this.setMode('play'),
     };
   }
 
@@ -445,12 +455,62 @@ export class Editor {
     return `${base}_${i}`;
   }
 
-  private async openLevel(): Promise<void> {
+  async openLevel(): Promise<void> {
     const level = await loadLevelFromDisk();
     if (!level) return;
     this.deselect();
     this.history.clear();
     this.levelHandle.replace(level);
+  }
+
+  saveLevel(): void {
+    void saveLevel(this.levelHandle.level);
+  }
+
+  saveLevelAs(): void {
+    void saveLevelAs(this.levelHandle.level);
+  }
+
+  /** Wipe the level, keeping spawn/killY but dropping all placements. */
+  newLevel(): void {
+    this.deselect();
+    this.history.clear();
+    this.levelHandle.clear();
+  }
+
+  undo(): void {
+    this.history.undo();
+  }
+
+  redo(): void {
+    this.history.redo();
+  }
+
+  setSnap(enabled: boolean): void {
+    if (this.snapEnabled === enabled) return;
+    this.snapEnabled = enabled;
+    this.applySnap();
+    uiStore.set({ snapEnabled: enabled });
+  }
+
+  setColliderView(mode: import('../physics/debugView').DebugMode): void {
+    this.physicsDebug?.setMode(mode);
+    uiStore.set({ colliderView: mode });
+  }
+
+  async importGlbFiles(files: File[]): Promise<void> {
+    for (const f of files) {
+      if (!f.name.toLowerCase().endsWith('.glb') && !f.name.toLowerCase().endsWith('.gltf')) continue;
+      const buf = await f.arrayBuffer();
+      const id = this.makeAssetId(f.name);
+      try {
+        await this.registry.addGltfFromArrayBuffer(id, buf, 'trimesh');
+        this.refreshAssets();
+        uiStore.set({ paletteCurrent: id });
+      } catch (err) {
+        console.error('[editor] import failed:', err);
+      }
+    }
   }
 
   private onGizmoChange(): void {
