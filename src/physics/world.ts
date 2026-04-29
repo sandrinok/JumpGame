@@ -12,9 +12,12 @@ export async function initPhysics(): Promise<Physics> {
   return { RAPIER, world };
 }
 
-export function addStaticGround(physics: Physics, size = 200): void {
+export function addStaticGround(physics: Physics, size = 200): RAPIER.Collider {
   const { RAPIER, world } = physics;
   const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, 0, 0));
   const half = size / 2;
-  world.createCollider(RAPIER.ColliderDesc.cuboid(half, 0.05, half).setTranslation(0, -0.05, 0), body);
+  return world.createCollider(
+    RAPIER.ColliderDesc.cuboid(half, 0.05, half).setTranslation(0, -0.05, 0),
+    body,
+  );
 }

@@ -36,7 +36,7 @@ const input = new Input(renderer.domElement);
 const followCam = new FollowCamera(camera);
 
 const physics = await initPhysics();
-addStaticGround(physics);
+const groundCollider = addStaticGround(physics);
 
 const registry = new AssetRegistry();
 await registry.loadManifest('/assets/manifest.json');
@@ -79,7 +79,9 @@ if (import.meta.env.DEV) {
     import('./editor.css'),
   ]);
   const e = new Editor(renderer, scene, camera, levelHandle, registry, input);
-  e.physicsDebug = new PhysicsDebugView(scene, physics);
+  const dbg = new PhysicsDebugView(scene, physics);
+  dbg.exclude(groundCollider);
+  e.physicsDebug = dbg;
   editor = e;
 
   const uiHost = document.createElement('div');
