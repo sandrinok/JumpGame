@@ -10,9 +10,13 @@ export interface Inspector {
 }
 
 const COLLIDER_OPTIONS: Array<{ value: ColliderShape; label: string; hint: string }> = [
-  { value: 'box', label: 'Box', hint: 'AABB · fastest, may not match shape' },
+  { value: 'box', label: 'Box', hint: 'AABB · fastest, very reliable' },
+  { value: 'sphere', label: 'Sphere', hint: 'Ball · ideal for round props' },
+  { value: 'cylinder', label: 'Cyl', hint: 'Y-aligned cylinder · pillars/pipes' },
+  { value: 'capsule', label: 'Caps', hint: 'Y-aligned capsule · smooth tops' },
+  { value: 'cone', label: 'Cone', hint: 'Y-aligned cone · spikes/funnels' },
   { value: 'convex', label: 'Convex', hint: 'Convex hull · good middle ground' },
-  { value: 'trimesh', label: 'Trimesh', hint: 'Exact · slowest, only for static' },
+  { value: 'trimesh', label: 'Tri', hint: 'Exact · slowest, only for static' },
 ];
 
 export function createInspector(parent: HTMLElement): Inspector {
@@ -40,7 +44,7 @@ export function createInspector(parent: HTMLElement): Inspector {
   root.appendChild(collLabel);
 
   const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display: flex; gap: 4px; margin-bottom: 6px;';
+  btnRow.style.cssText = 'display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 6px;';
   root.appendChild(btnRow);
 
   const hint = document.createElement('div');
@@ -87,6 +91,7 @@ export function createInspector(parent: HTMLElement): Inspector {
     meta.innerHTML =
       `uid: ${r.placement.uid}<br>` +
       `pos: ${fmtVec(r.placement.pos)}<br>` +
+      `rot°: ${fmtVec(r.placement.rot.map((v) => (v * 180) / Math.PI) as [number, number, number])}<br>` +
       `scale: ${fmtVec(r.placement.scale)}`;
 
     btnRow.innerHTML = '';
@@ -104,7 +109,7 @@ export function createInspector(parent: HTMLElement): Inspector {
       const btn = document.createElement('button');
       btn.textContent = opt.label;
       btn.style.cssText = `
-        flex: 1; padding: 5px 4px; font: inherit; font-size: 12px;
+        padding: 5px 2px; font: inherit; font-size: 11px;
         background: ${active === opt.value ? '#3a5a8a' : '#2a2a30'};
         color: inherit; border: 1px solid #555; border-radius: 3px;
         cursor: pointer;

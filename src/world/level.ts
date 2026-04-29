@@ -125,25 +125,55 @@ function createBody(
     const colliderType = p.collider ?? asset.def.collider;
     const size = new THREE.Vector3();
     asset.bbox.getSize(size);
-    if (colliderType === 'box') {
-      const center = new THREE.Vector3();
-      asset.bbox.getCenter(center);
-      colDesc = RAPIER.ColliderDesc.cuboid(
-        Math.max(0.01, (size.x * p.scale[0]) / 2),
-        Math.max(0.01, (size.y * p.scale[1]) / 2),
-        Math.max(0.01, (size.z * p.scale[2]) / 2),
-      ).setTranslation(
-        center.x * p.scale[0],
-        center.y * p.scale[1],
-        center.z * p.scale[2],
-      );
-    } else {
-      const { vertices, indices } = collectMeshGeometry(asset.template, p.scale);
-      const built =
-        colliderType === 'trimesh'
-          ? RAPIER.ColliderDesc.trimesh(vertices, indices)
-          : RAPIER.ColliderDesc.convexHull(vertices);
-      colDesc = built ?? RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);
+    const center = new THREE.Vector3();
+    asset.bbox.getCenter(center);
+    const wx = Math.max(0.01, size.x * p.scale[0]);
+    const wy = Math.max(0.01, size.y * p.scale[1]);
+    const wz = Math.max(0.01, size.z * p.scale[2]);
+    const offset = {
+      x: center.x * p.scale[0],
+      y: center.y * p.scale[1],
+      z: center.z * p.scale[2],
+    };
+    switch (colliderType) {
+      case 'box':
+        colDesc = RAPIER.ColliderDesc.cuboid(wx / 2, wy / 2, wz / 2)
+          .setTranslation(offset.x, offset.y, offset.z);
+        break;
+      case 'sphere': {
+        const r = Math.max(wx, wy, wz) / 2;
+        colDesc = RAPIER.ColliderDesc.ball(r).setTranslation(offset.x, offset.y, offset.z);
+        break;
+      }
+      case 'cylinder': {
+        const halfH = wy / 2;
+        const r = Math.max(wx, wz) / 2;
+        colDesc = RAPIER.ColliderDesc.cylinder(halfH, r).setTranslation(offset.x, offset.y, offset.z);
+        break;
+      }
+      case 'capsule': {
+        const r = Math.max(wx, wz) / 2;
+        const halfH = Math.max(0.01, wy / 2 - r);
+        colDesc = RAPIER.ColliderDesc.capsule(halfH, r).setTranslation(offset.x, offset.y, offset.z);
+        break;
+      }
+      case 'cone': {
+        const halfH = wy / 2;
+        const r = Math.max(wx, wz) / 2;
+        colDesc = RAPIER.ColliderDesc.cone(halfH, r).setTranslation(offset.x, offset.y, offset.z);
+        break;
+      }
+      case 'convex':
+      case 'trimesh':
+      default: {
+        const { vertices, indices } = collectMeshGeometry(asset.template, p.scale);
+        const built =
+          colliderType === 'trimesh'
+            ? RAPIER.ColliderDesc.trimesh(vertices, indices)
+            : RAPIER.ColliderDesc.convexHull(vertices);
+        colDesc = built ?? RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);
+        break;
+      }
     }
   } else {
     colDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);

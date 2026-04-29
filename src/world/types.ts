@@ -19,7 +19,14 @@ export interface Level {
   placements: Placement[];
 }
 
-export type ColliderShape = 'box' | 'trimesh' | 'convex';
+export type ColliderShape =
+  | 'box'
+  | 'sphere'
+  | 'cylinder'
+  | 'capsule'
+  | 'cone'
+  | 'convex'
+  | 'trimesh';
 
 export interface PrimitiveAsset {
   kind: 'primitive';
