@@ -80,6 +80,7 @@ if (import.meta.env.DEV) {
   e.palette = createPalette(container, registry);
   e.inspector = createInspector(container);
   e.inspector.onColliderChange = (shape) => e.changeSelectedCollider(shape);
+  e.inspector.onColliderParamsChange = (params) => e.changeSelectedColliderParams(params);
   e.physicsDebug = new PhysicsDebugView(scene, physics);
   editor = e;
 }

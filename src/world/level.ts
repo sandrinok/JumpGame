@@ -123,44 +123,47 @@ function createBody(
     colDesc = RAPIER.ColliderDesc.cuboid(p.scale[0] / 2, p.scale[1] / 2, p.scale[2] / 2);
   } else if (asset.def.kind === 'gltf') {
     const colliderType = p.collider ?? asset.def.collider;
-    const size = new THREE.Vector3();
-    asset.bbox.getSize(size);
-    const center = new THREE.Vector3();
-    asset.bbox.getCenter(center);
-    const wx = Math.max(0.01, size.x * p.scale[0]);
-    const wy = Math.max(0.01, size.y * p.scale[1]);
-    const wz = Math.max(0.01, size.z * p.scale[2]);
+    const params = p.colliderParams ?? {};
+    const bboxSize = new THREE.Vector3();
+    asset.bbox.getSize(bboxSize);
+    const bboxCenter = new THREE.Vector3();
+    asset.bbox.getCenter(bboxCenter);
+    const wx = Math.max(0.01, params.size?.[0] ?? bboxSize.x * p.scale[0]);
+    const wy = Math.max(0.01, params.size?.[1] ?? bboxSize.y * p.scale[1]);
+    const wz = Math.max(0.01, params.size?.[2] ?? bboxSize.z * p.scale[2]);
     const offset = {
-      x: center.x * p.scale[0],
-      y: center.y * p.scale[1],
-      z: center.z * p.scale[2],
+      x: params.offset?.[0] ?? bboxCenter.x * p.scale[0],
+      y: params.offset?.[1] ?? bboxCenter.y * p.scale[1],
+      z: params.offset?.[2] ?? bboxCenter.z * p.scale[2],
     };
+    const localRot = params.rot
+      ? quatFromEuler(params.rot)
+      : null;
     switch (colliderType) {
       case 'box':
-        colDesc = RAPIER.ColliderDesc.cuboid(wx / 2, wy / 2, wz / 2)
-          .setTranslation(offset.x, offset.y, offset.z);
+        colDesc = RAPIER.ColliderDesc.cuboid(wx / 2, wy / 2, wz / 2);
         break;
       case 'sphere': {
         const r = Math.max(wx, wy, wz) / 2;
-        colDesc = RAPIER.ColliderDesc.ball(r).setTranslation(offset.x, offset.y, offset.z);
+        colDesc = RAPIER.ColliderDesc.ball(r);
         break;
       }
       case 'cylinder': {
         const halfH = wy / 2;
         const r = Math.max(wx, wz) / 2;
-        colDesc = RAPIER.ColliderDesc.cylinder(halfH, r).setTranslation(offset.x, offset.y, offset.z);
+        colDesc = RAPIER.ColliderDesc.cylinder(halfH, r);
         break;
       }
       case 'capsule': {
         const r = Math.max(wx, wz) / 2;
         const halfH = Math.max(0.01, wy / 2 - r);
-        colDesc = RAPIER.ColliderDesc.capsule(halfH, r).setTranslation(offset.x, offset.y, offset.z);
+        colDesc = RAPIER.ColliderDesc.capsule(halfH, r);
         break;
       }
       case 'cone': {
         const halfH = wy / 2;
         const r = Math.max(wx, wz) / 2;
-        colDesc = RAPIER.ColliderDesc.cone(halfH, r).setTranslation(offset.x, offset.y, offset.z);
+        colDesc = RAPIER.ColliderDesc.cone(halfH, r);
         break;
       }
       case 'convex':
@@ -175,6 +178,8 @@ function createBody(
         break;
       }
     }
+    colDesc.setTranslation(offset.x, offset.y, offset.z);
+    if (localRot) colDesc.setRotation(localRot);
   } else {
     colDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);
   }

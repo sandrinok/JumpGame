@@ -8,7 +8,7 @@ import type { AssetRegistry } from '../world/registry';
 import { History } from './history';
 import { EditorCameraController } from './cameraController';
 import type { Input } from '../core/input';
-import type { ColliderShape } from '../world/types';
+import type { ColliderShape, ColliderParams } from '../world/types';
 import type { Inspector } from './inspector';
 import type { PhysicsDebugView } from '../physics/debugView';
 
@@ -338,6 +338,35 @@ export class Editor {
     this.inspector?.setSelection(null, null);
   }
 
+  /** Change the collider transform overrides for the selected placement. null clears all overrides. */
+  changeSelectedColliderParams(next: ColliderParams | null): void {
+    if (!this.selected) return;
+    const uid = this.selected.placement.uid;
+    const before = this.selected.placement.colliderParams;
+    if (sameParams(before, next ?? undefined)) return;
+
+    const apply = (params: ColliderParams | null): void => {
+      const r = this.levelHandle.rendered.get(uid);
+      if (!r) return;
+      if (params === null) delete r.placement.colliderParams;
+      else r.placement.colliderParams = params;
+      this.levelHandle.updateTransform(uid);
+      if (this.selected?.placement.uid === uid) {
+        this.inspector?.setSelection(r, this.registry.get(r.placement.id) ?? null);
+      }
+    };
+
+    // For continuous edits we do not want a history entry per keystroke.
+    // Skip undo recording when only minor numeric changes; for now do record
+    // the snapshot as a single command (debounced caller is responsible for
+    // coalescing if needed).
+    this.history.exec({
+      label: 'collider params',
+      do: () => apply(next),
+      undo: () => apply(before ?? null),
+    });
+  }
+
   /** Change the collider for the selected placement (null = use asset default). */
   changeSelectedCollider(shape: ColliderShape | null): void {
     if (!this.selected) return;
@@ -420,4 +449,11 @@ export class Editor {
 
 function vec3Eq(a: Vec3, b: Vec3): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+}
+
+function sameParams(a: ColliderParams | undefined, b: ColliderParams | undefined): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  const k = (v?: Vec3) => (v ? v.join(',') : '_');
+  return k(a.offset) === k(b.offset) && k(a.size) === k(b.size) && k(a.rot) === k(b.rot);
 }

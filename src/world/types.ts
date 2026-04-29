@@ -11,6 +11,17 @@ export interface Placement {
   scale: Vec3;
   /** optional per-placement collider override (gltf assets only) */
   collider?: ColliderShape;
+  /** optional per-placement collider transform overrides */
+  colliderParams?: ColliderParams;
+}
+
+export interface ColliderParams {
+  /** override the auto-derived size (world units, before placement scale) */
+  size?: Vec3;
+  /** local offset relative to placement origin */
+  offset?: Vec3;
+  /** local rotation relative to placement (Euler XYZ, radians) */
+  rot?: Vec3;
 }
 
 export interface Level {
