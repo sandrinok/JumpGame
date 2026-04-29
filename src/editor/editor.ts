@@ -70,6 +70,7 @@ export class Editor {
     this.gizmoHelper.visible = false;
 
     this.refreshAssets();
+    this.publishPlacements();
 
     window.addEventListener('keydown', (e) => this.onKeyDown(e));
     renderer.domElement.addEventListener('pointerdown', (e) => this.onPointerDown(e));
@@ -221,10 +222,12 @@ export class Editor {
       do: () => {
         const r = this.levelHandle.addPlacement(p);
         if (r) this.select(r);
+        this.publishPlacements();
       },
       undo: () => {
         if (this.selected?.placement.uid === p.uid) this.deselect();
         this.levelHandle.removePlacement(p.uid);
+        this.publishPlacements();
       },
     });
   }
@@ -235,10 +238,14 @@ export class Editor {
     this.deselect();
     this.history.exec({
       label: `delete ${p.id}`,
-      do: () => this.levelHandle.removePlacement(p.uid),
+      do: () => {
+        this.levelHandle.removePlacement(p.uid);
+        this.publishPlacements();
+      },
       undo: () => {
         const r = this.levelHandle.addPlacement(p);
         if (r) this.select(r);
+        this.publishPlacements();
       },
     });
   }
@@ -322,9 +329,15 @@ export class Editor {
 
   private select(r: RenderedPlacement): void {
     this.selected = r;
-    this.gizmo.attach(r.group);
-    this.gizmoHelper.visible = true;
-    this.gizmo.setMode(this.gizmoMode);
+    const isLocked = uiStore.get().locked.has(r.placement.uid);
+    if (!isLocked) {
+      this.gizmo.attach(r.group);
+      this.gizmoHelper.visible = true;
+      this.gizmo.setMode(this.gizmoMode);
+    } else {
+      this.gizmo.detach();
+      this.gizmoHelper.visible = false;
+    }
     uiStore.set({
       selection: r,
       selectionAsset: this.registry.get(r.placement.id) ?? null,
@@ -341,6 +354,11 @@ export class Editor {
   /** Update uiStore with the current registry contents. */
   refreshAssets(): void {
     uiStore.set({ assets: this.registry.all() });
+  }
+
+  /** Update uiStore with a fresh placements snapshot for the outliner. */
+  publishPlacements(): void {
+    uiStore.set({ placements: [...this.levelHandle.level.placements] });
   }
 
   /** Read-only snapshot of action handlers for the React UI. */
@@ -362,6 +380,9 @@ export class Editor {
       setColliderView: (m) => this.setColliderView(m),
       setSnap: (v) => this.setSnap(v),
       exitEditor: () => this.setMode('play'),
+      selectByUid: (uid) => this.selectByUid(uid),
+      toggleHidden: (uid) => this.toggleHidden(uid),
+      toggleLocked: (uid) => this.toggleLocked(uid),
     };
   }
 
@@ -461,6 +482,7 @@ export class Editor {
     this.deselect();
     this.history.clear();
     this.levelHandle.replace(level);
+    this.publishPlacements();
   }
 
   saveLevel(): void {
@@ -476,6 +498,42 @@ export class Editor {
     this.deselect();
     this.history.clear();
     this.levelHandle.clear();
+    this.publishPlacements();
+  }
+
+  /** Select a placement by uid (called from outliner). Locked items still select. */
+  selectByUid(uid: string): void {
+    const r = this.levelHandle.rendered.get(uid);
+    if (!r) return;
+    this.select(r);
+  }
+
+  toggleHidden(uid: string): void {
+    const r = this.levelHandle.rendered.get(uid);
+    if (!r) return;
+    const cur = uiStore.get().hidden;
+    const next = new Set(cur);
+    if (next.has(uid)) {
+      next.delete(uid);
+      r.group.visible = true;
+    } else {
+      next.add(uid);
+      r.group.visible = false;
+    }
+    uiStore.set({ hidden: next });
+  }
+
+  toggleLocked(uid: string): void {
+    const cur = uiStore.get().locked;
+    const next = new Set(cur);
+    if (next.has(uid)) next.delete(uid);
+    else next.add(uid);
+    uiStore.set({ locked: next });
+    // if currently selected and now locked, detach gizmo
+    if (next.has(uid) && this.selected?.placement.uid === uid) {
+      this.gizmo.detach();
+      this.gizmoHelper.visible = false;
+    }
   }
 
   undo(): void {

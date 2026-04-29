@@ -1,6 +1,7 @@
 import type { ResolvedAsset } from '../../world/registry';
 import type { RenderedPlacement } from '../../world/level';
 import type { DebugMode } from '../../physics/debugView';
+import type { Placement } from '../../world/types';
 
 /**
  * Editor UI state shared between the (TS) Editor controller and the (React)
@@ -20,6 +21,14 @@ export interface EditorUiState {
   selectionVersion: number;
   snapEnabled: boolean;
   colliderView: DebugMode;
+  /** uids that are hidden in editor (not persisted) */
+  hidden: Set<string>;
+  /** uids that are locked in editor (not persisted) */
+  locked: Set<string>;
+  /** monotonic counter, bumped whenever placements are added/removed */
+  placementsVersion: number;
+  /** snapshot of all level placements for the outliner */
+  placements: Placement[];
 }
 
 export type Listener = () => void;
@@ -33,6 +42,10 @@ const initial: EditorUiState = {
   selectionVersion: 0,
   snapEnabled: true,
   colliderView: 'off',
+  hidden: new Set(),
+  locked: new Set(),
+  placementsVersion: 0,
+  placements: [],
 };
 
 let state: EditorUiState = initial;
@@ -48,6 +61,10 @@ export const uiStore = {
   },
   bumpSelection(): void {
     state = { ...state, selectionVersion: state.selectionVersion + 1 };
+    for (const l of listeners) l();
+  },
+  bumpPlacements(): void {
+    state = { ...state, placementsVersion: state.placementsVersion + 1 };
     for (const l of listeners) l();
   },
   subscribe(l: Listener): () => void {

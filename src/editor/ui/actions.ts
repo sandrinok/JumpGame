@@ -22,6 +22,10 @@ export interface EditorActions {
   setColliderView(mode: DebugMode): void;
   setSnap(enabled: boolean): void;
   exitEditor(): void;
+  // outliner
+  selectByUid(uid: string): void;
+  toggleHidden(uid: string): void;
+  toggleLocked(uid: string): void;
 }
 
 const noop: EditorActions = {
@@ -41,6 +45,9 @@ const noop: EditorActions = {
   setColliderView: () => undefined,
   setSnap: () => undefined,
   exitEditor: () => undefined,
+  selectByUid: () => undefined,
+  toggleHidden: () => undefined,
+  toggleLocked: () => undefined,
 };
 
 export const EditorActionsContext = createContext<EditorActions>(noop);

@@ -8,7 +8,7 @@ export function PalettePanel(): JSX.Element {
   const actions = useEditorActions();
 
   return (
-    <Card className="absolute top-3 right-3 w-[230px] max-h-[70vh] flex flex-col">
+    <Card className="absolute top-16 left-3 w-[230px] max-h-[75vh] flex flex-col">
       <CardHeader>
         <CardTitle>Assets</CardTitle>
       </CardHeader>

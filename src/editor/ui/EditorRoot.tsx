@@ -3,6 +3,7 @@ import { EditorActionsContext, type EditorActions } from './actions';
 import { PalettePanel } from './PalettePanel';
 import { InspectorPanel } from './InspectorPanel';
 import { Topbar } from './Topbar';
+import { Outliner } from './Outliner';
 
 interface Props {
   actions: EditorActions;
@@ -16,6 +17,7 @@ export function EditorRoot({ actions }: Props): JSX.Element | null {
       <div className="editor-ui-root">
         <Topbar />
         <PalettePanel />
+        <Outliner />
         <InspectorPanel />
       </div>
     </EditorActionsContext.Provider>
