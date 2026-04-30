@@ -28,6 +28,10 @@ export interface Player {
   coyote: number;
   jumpBuffer: number;
   jumping: boolean;
+  /** ticks down after a jump press; while >0 the rig plays the jump_start one-shot */
+  jumpTrigger: number;
+  /** ticks down after a landing; while >0 the rig plays the land one-shot */
+  landTimer: number;
 }
 
 export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
@@ -51,6 +55,8 @@ export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
     coyote: 0,
     jumpBuffer: 0,
     jumping: false,
+    jumpTrigger: 0,
+    landTimer: 0,
   };
 }
 
@@ -63,17 +69,43 @@ export function respawnPlayer(player: Player, pos: [number, number, number], yaw
   player.coyote = 0;
   player.jumpBuffer = 0;
   player.jumping = false;
+  player.jumpTrigger = 0;
+  player.landTimer = 0;
   player.visualRoot.position.set(pos[0], pos[1], pos[2]);
   player.visualRoot.rotation.y = yaw;
 }
 
-export async function attachCharacterRig(player: Player, url: string): Promise<void> {
-  const rig = await loadCharacterRig(url);
-  // model origin is at the feet; offset down by capsule half-height + radius
-  const feetOffset = -(player.body.halfHeight + player.body.radius);
-  rig.root.position.y = feetOffset;
-  // Soldier.glb faces -Z by default; player yaw=0 means facing +Z, so flip 180°.
-  rig.root.rotation.y = Math.PI;
+export interface AttachRigOptions {
+  /** Yaw offset applied to the rig (radians). Use Math.PI if the model faces backwards. */
+  facingYaw?: number;
+  /** If true, scale the rig so its bbox height matches the capsule height. Default: true. */
+  autoFit?: boolean;
+  /** Optional URL of a separate GLB whose animations are retargeted onto this rig. */
+  animationsUrl?: string;
+}
+
+export async function attachCharacterRig(
+  player: Player,
+  url: string,
+  opts: AttachRigOptions = {},
+): Promise<void> {
+  const rig = await loadCharacterRig(url, opts.animationsUrl);
+  const capsuleHeight = (player.body.halfHeight + player.body.radius) * 2;
+
+  if (opts.autoFit !== false) {
+    const bbox = new THREE.Box3().setFromObject(rig.root);
+    const size = bbox.getSize(new THREE.Vector3());
+    if (size.y > 0.0001) {
+      const s = capsuleHeight / size.y;
+      rig.root.scale.setScalar(s);
+    }
+  }
+
+  // recompute bbox after scaling so we can place feet at the capsule bottom
+  const bbox = new THREE.Box3().setFromObject(rig.root);
+  rig.root.position.y -= bbox.min.y + capsuleHeight / 2;
+
+  rig.root.rotation.y = opts.facingYaw ?? 0;
   player.visualRoot.add(rig.root);
   player.debugMesh.visible = false;
   player.rig = rig;
@@ -133,8 +165,11 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
     player.jumping = true;
     player.coyote = 0;
     player.jumpBuffer = 0;
+    player.jumpTrigger = 0.25;
     playJump();
   }
+  player.jumpTrigger = Math.max(0, player.jumpTrigger - dt);
+  player.landTimer = Math.max(0, player.landTimer - dt);
 
   if (player.jumping && !input.isDown('Space') && player.velocity.y > JUMP_CUT_VELOCITY) {
     player.velocity.y = JUMP_CUT_VELOCITY;
@@ -159,7 +194,10 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
   player.grounded = body.controller.computedGrounded();
   if (player.grounded && !wasGrounded) {
     const impact = Math.min(2, Math.abs(player.velocity.y) / 8);
-    if (impact > 0.2) playLand(impact);
+    if (impact > 0.2) {
+      playLand(impact);
+      player.landTimer = 0.25;
+    }
   }
 
   // visual sync
@@ -168,7 +206,15 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
 
   if (player.rig) {
     const horizSpeed = Math.hypot(player.velocity.x, player.velocity.z);
-    const next = pickState({ grounded: player.grounded, speed: horizSpeed, runSpeed: RUN_SPEED });
+    const next = pickState({
+      grounded: player.grounded,
+      speed: horizSpeed,
+      runSpeed: RUN_SPEED,
+      verticalVelocity: player.velocity.y,
+      justJumped: player.jumpTrigger > 0,
+      justLanded: player.landTimer > 0,
+      landTimer: player.landTimer,
+    });
     setState(player.rig, next);
     player.rig.mixer.update(dt);
   }

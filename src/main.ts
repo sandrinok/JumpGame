@@ -10,6 +10,7 @@ import { AssetRegistry } from './world/registry';
 import { instantiate, loadLevel } from './world/level';
 import { createHud } from './ui/hud';
 import { loadScore, saveScore } from './persistence/score';
+import { setLevelSource } from './persistence/levelFile';
 import { createStartScreen } from './ui/startScreen';
 import { playWindBurst, unlockAudio } from './audio/sfx';
 import { createDebugHud } from './ui/debugHud';
@@ -40,7 +41,9 @@ const groundCollider = addStaticGround(physics);
 
 const registry = new AssetRegistry();
 await registry.loadManifest('/assets/manifest.json');
-const level = await loadLevel('/levels/dev.json');
+const LEVEL_PATH = '/levels/dev.json';
+const level = await loadLevel(LEVEL_PATH);
+setLevelSource(LEVEL_PATH);
 const levelHandle = instantiate(scene, physics, registry, level);
 
 const character = createCharacter(physics, {
@@ -49,7 +52,9 @@ const character = createCharacter(physics, {
   z: levelHandle.level.spawn.pos[2],
 });
 const player = createPlayer(scene, character);
-attachCharacterRig(player, '/assets/character/Soldier.glb').catch((e) => {
+attachCharacterRig(player, '/assets/character/Universal Base Character/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf', {
+  animationsUrl: '/assets/character/Universal Animation Library Standard/Unreal-Godot/UAL1_Standard.glb',
+}).catch((e) => {
   console.warn('Character rig failed to load, using debug capsule:', e);
 });
 

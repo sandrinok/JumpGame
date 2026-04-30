@@ -11,14 +11,47 @@ const PICKER_OPTS = {
 };
 
 let lastHandle: FileSystemFileHandle | null = null;
+/** Source path of the level loaded from /levels/*.json — set by setLevelSource. */
+let levelSource: string | null = null;
+
+export function setLevelSource(path: string | null): void {
+  // Strip leading slash so we can POST it directly to /__save-level/<rel>.
+  levelSource = path ? path.replace(/^\/+/, '') : null;
+}
+
+export function getLevelSource(): string | null {
+  return levelSource;
+}
 
 export function serializeLevel(level: Level): string {
   return JSON.stringify(level, null, 2);
 }
 
+async function trySaveToDevServer(rel: string, text: string): Promise<boolean> {
+  if (!import.meta.env.DEV) return false;
+  try {
+    const res = await fetch(`/__save-level/${rel}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: text,
+    });
+    if (!res.ok) {
+      console.warn('[level] dev-server save returned', res.status);
+      return false;
+    }
+    console.info('[level] saved to', rel);
+    return true;
+  } catch (e) {
+    console.warn('[level] dev-server save failed:', e);
+    return false;
+  }
+}
+
 export async function saveLevel(level: Level): Promise<void> {
   const w = window as unknown as FSWindow;
   const text = serializeLevel(level);
+  // Dev: overwrite the source file in /public via the vite middleware.
+  if (levelSource && (await trySaveToDevServer(levelSource, text))) return;
   if (w.showSaveFilePicker) {
     try {
       const handle = lastHandle ?? (await w.showSaveFilePicker(PICKER_OPTS));
@@ -48,6 +81,8 @@ export async function saveLevelAs(level: Level): Promise<void> {
 }
 
 export async function loadLevelFromDisk(): Promise<Level | null> {
+  // Loading from disk replaces the source — subsequent Save uses the FS picker, not the dev server.
+  levelSource = null;
   const w = window as unknown as FSWindow;
   if (w.showOpenFilePicker) {
     try {

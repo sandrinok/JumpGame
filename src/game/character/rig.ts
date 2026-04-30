@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-export type CharacterState = 'idle' | 'walk' | 'run' | 'air';
+export type CharacterState = 'idle' | 'walk' | 'run' | 'jump' | 'fall' | 'land';
 
 export interface CharacterRig {
   root: THREE.Object3D;
@@ -10,11 +10,18 @@ export interface CharacterRig {
   current: CharacterState;
 }
 
-const FADE = 0.15;
+const FADE = 0.18;
+const ONE_SHOT: ReadonlySet<CharacterState> = new Set(['jump', 'land']);
 
-export async function loadCharacterRig(url: string): Promise<CharacterRig> {
+export async function loadCharacterRig(
+  url: string,
+  animationsUrl?: string,
+): Promise<CharacterRig> {
   const loader = new GLTFLoader();
-  const gltf = await loader.loadAsync(url);
+  const [gltf, animsGltf] = await Promise.all([
+    loader.loadAsync(url),
+    animationsUrl ? loader.loadAsync(animationsUrl) : Promise.resolve(null),
+  ]);
   const root = gltf.scene;
   root.traverse((o) => {
     if ((o as THREE.Mesh).isMesh) {
@@ -25,29 +32,44 @@ export async function loadCharacterRig(url: string): Promise<CharacterRig> {
   });
   const mixer = new THREE.AnimationMixer(root);
   const byName: Record<string, THREE.AnimationClip> = {};
-  for (const c of gltf.animations) byName[c.name.toLowerCase()] = c;
+  const allClips: THREE.AnimationClip[] = [...gltf.animations];
+  if (animsGltf) allClips.push(...animsGltf.animations);
+  for (const c of allClips) byName[c.name.toLowerCase()] = c;
 
   const pick = (...names: string[]): THREE.AnimationClip | undefined => {
-    for (const n of names) if (byName[n]) return byName[n];
+    for (const n of names) {
+      const c = byName[n.toLowerCase()];
+      if (c) return c;
+    }
     return undefined;
   };
 
-  const idleClip = pick('idle');
-  const walkClip = pick('walk', 'walking');
-  const runClip = pick('run', 'running');
+  const clips: Partial<Record<CharacterState, THREE.AnimationClip>> = {
+    idle: pick('idle_loop', 'idle', 'unarmed_idle'),
+    walk: pick('walk_loop', 'walking_a', 'walk', 'walking'),
+    run: pick('jog_fwd_loop', 'sprint_loop', 'running_a', 'run', 'running'),
+    jump: pick('jump_start', 'jump'),
+    fall: pick('jump_loop', 'jump_idle', 'falling_idle', 'falling', 'fall'),
+    land: pick('jump_land', 'landing', 'land'),
+  };
+
+  // Fallbacks: prefer idle as a stable airborne pose over a mismatched clip
+  if (!clips.fall) clips.fall = clips.idle;
+  if (!clips.jump) clips.jump = clips.idle;
+  if (!clips.land) clips.land = clips.idle;
 
   const actions: CharacterRig['actions'] = {};
-  if (idleClip) actions.idle = mixer.clipAction(idleClip);
-  if (walkClip) actions.walk = mixer.clipAction(walkClip);
-  if (runClip) actions.run = mixer.clipAction(runClip);
-  // reuse idle as airborne pose for now (no dedicated jump clip in Soldier.glb)
-  if (idleClip) actions.air = mixer.clipAction(idleClip);
-
-  for (const a of Object.values(actions)) {
-    if (!a) continue;
+  for (const [state, clip] of Object.entries(clips) as [CharacterState, THREE.AnimationClip | undefined][]) {
+    if (!clip) continue;
+    const a = mixer.clipAction(clip);
+    if (ONE_SHOT.has(state)) {
+      a.setLoop(THREE.LoopOnce, 1);
+      a.clampWhenFinished = true;
+    }
     a.enabled = true;
     a.setEffectiveWeight(0);
     a.play();
+    actions[state] = a;
   }
 
   if (actions.idle) actions.idle.setEffectiveWeight(1);
@@ -69,8 +91,22 @@ export function setState(rig: CharacterRig, next: CharacterState): void {
   rig.current = next;
 }
 
-export function pickState(opts: { grounded: boolean; speed: number; runSpeed: number }): CharacterState {
-  if (!opts.grounded) return 'air';
+export interface PickStateOpts {
+  grounded: boolean;
+  speed: number;
+  runSpeed: number;
+  verticalVelocity: number;
+  justJumped: boolean;
+  justLanded: boolean;
+  landTimer: number;
+}
+
+export function pickState(opts: PickStateOpts): CharacterState {
+  if (opts.justJumped) return 'jump';
+  if (!opts.grounded) {
+    return opts.verticalVelocity > 1.5 ? 'jump' : 'fall';
+  }
+  if (opts.landTimer > 0) return 'land';
   if (opts.speed < 0.3) return 'idle';
   if (opts.speed > opts.runSpeed * 0.7) return 'run';
   return 'walk';

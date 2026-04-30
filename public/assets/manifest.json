@@ -80,6 +80,138 @@
       "tags": [
         "imported"
       ]
+    },
+    {
+      "id": "cake_with_cherry",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/cake_with_cherry.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "concrete_road_barrier_photoscanned",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/concrete_road_barrier_photoscanned.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "cookiecat",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/cookiecat.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "crane",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/crane.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "electricbox003_-_street_kitbash_collection",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/electricbox003_-_street_kitbash_collection.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "japanese_street_lamp",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/japanese_street_lamp.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "origami_crane",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/origami_crane.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "road_caution_sign_8_mb",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/road_caution_sign_8_mb.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "road_cone",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/road_cone.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "road__avenue__street",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/road__avenue__street.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "rubber_duck",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/rubber_duck.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "sushi",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/sushi.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
     }
   ]
 }
