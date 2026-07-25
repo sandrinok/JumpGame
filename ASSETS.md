@@ -37,19 +37,41 @@ a prop you have to scale by 0.001 usually has other problems too.
 **Silhouette over detail.** From a platformer camera you read shape, not
 texture. A clean chunky object beats a detailed one every time.
 
-## Licensing — read this before publishing
+## Licensing
 
-Most free Sketchfab models are **CC-BY**: free to use commercially, but they
-*require* visible attribution. The game is deployed publicly and currently
-credits nobody.
+Most free Sketchfab models are **CC-BY**: free to use, but they *require*
+visible attribution wherever the work is published.
 
-Either prefer **CC0** models (no attribution required — filter for it on
-Sketchfab), or add a credits screen. Until one exists, CC-BY assets on the live
-site are a licence violation, not a grey area.
+**This is handled automatically.** Sketchfab embeds the author, licence and
+source URL in every download under glTF `asset.extras`, and the optimizer
+carries that through untouched. `scripts/build-credits.mjs` reads it back out
+of the shipped files and writes `public/assets/credits.json`, which the Credits
+button on the start screen renders. It runs as part of `npm run dev` and
+`npm run build`, so a new model credits itself.
 
-Sketchfab's download dialog has a copy-paste attribution string for every
-model. If you collect those as you go, building the credits screen later is
-trivial; reconstructing them afterwards is not.
+Two things to still watch for:
+
+- **Assets without embedded metadata.** The build-credits script prints a loud
+  warning listing them; add those to `MANUAL` in the script by hand. An
+  uncredited asset on a public site is exactly the problem it exists to catch.
+- **Licences that are not plain CC-BY.** The script reports the breakdown per
+  licence every run. Three to be careful with:
+  - **CC-BY-NC** — non-commercial only. Fine for a hobby build, but it has to
+    go the moment there is any revenue. The `Crane` model is one.
+  - **CC-BY-ND** — no derivatives, which arguably includes re-encoding through
+    the optimizer.
+  - **Sketchfab Standard** — not a Creative Commons licence at all, and it
+    restricts redistributing the model itself. A web build serves the `.glb`
+    straight to the browser, which is hard to argue is not redistribution. The
+    `Low-Poly Telephone Booth` is on this licence.
+
+Separately, the Sketchfab licence only covers the *model*, never the underlying
+intellectual property. A fan model of someone else's character or brand is
+still their character or brand — the `Fortnite - Pizza Planet Delivery Truck`
+is CC-BY as a model and someone else's trademark as a subject.
+
+Prefer **CC0** where you can: no attribution required, no restrictions, nothing
+to track.
 
 ## Places to look
 

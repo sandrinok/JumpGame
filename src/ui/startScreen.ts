@@ -5,6 +5,7 @@ export interface StartScreen {
   show(): void;
   hide(): void;
   onPlay: () => void;
+  onCredits: () => void;
 }
 
 export function createStartScreen(parent: HTMLElement, score: ScoreData): StartScreen {
@@ -75,10 +76,25 @@ export function createStartScreen(parent: HTMLElement, score: ScoreData): StartS
   hint.style.cssText = 'margin-top: 20px; font-size: 12px; opacity: 0.5;';
   card.appendChild(hint);
 
+  // Most of the 3D assets are CC-BY, which requires the credit to be reachable
+  // from the published game — not just sitting in a file in the repo.
+  const creditsBtn = document.createElement('button');
+  creditsBtn.textContent = 'Credits';
+  creditsBtn.style.cssText = `
+    margin-top: 10px; padding: 4px 10px; font: inherit; font-size: 12px;
+    background: transparent; color: #eee; opacity: 0.55;
+    border: 1px solid #444; border-radius: 5px; cursor: pointer;
+  `;
+  creditsBtn.addEventListener('mouseenter', () => (creditsBtn.style.opacity = '0.9'));
+  creditsBtn.addEventListener('mouseleave', () => (creditsBtn.style.opacity = '0.55'));
+  creditsBtn.addEventListener('click', () => api.onCredits());
+  card.appendChild(creditsBtn);
+
   parent.appendChild(root);
 
   const api: StartScreen = {
     onPlay: () => undefined,
+    onCredits: () => undefined,
     show() {
       renderBest();
       nameInput.value = score.name;

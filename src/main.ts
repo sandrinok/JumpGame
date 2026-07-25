@@ -18,6 +18,7 @@ import { createHud } from './ui/hud';
 import { loadScore, saveScore } from './persistence/score';
 import { setLevelSource } from './persistence/levelFile';
 import { createStartScreen } from './ui/startScreen';
+import { createCreditsScreen } from './ui/creditsScreen';
 import { playWindBurst, unlockAudio } from './audio/sfx';
 import { createDebugHud } from './ui/debugHud';
 
@@ -152,7 +153,9 @@ window.addEventListener('keydown', (e) => {
   void toggleEditor();
 });
 
+const creditsScreen = createCreditsScreen(container);
 const startScreen = createStartScreen(container, score);
+startScreen.onCredits = () => creditsScreen.open();
 startScreen.onPlay = () => {
   running = true;
   unlockAudio();

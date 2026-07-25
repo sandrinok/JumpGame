@@ -60,17 +60,6 @@
       ]
     },
     {
-      "id": "ambulance_shvan_92",
-      "asset": {
-        "kind": "gltf",
-        "url": "/assets/3d/ambulance_shvan_92.glb",
-        "collider": "trimesh"
-      },
-      "tags": [
-        "imported"
-      ]
-    },
-    {
       "id": "fortnite_-_pizza_planet_delivery_truck",
       "asset": {
         "kind": "gltf",
