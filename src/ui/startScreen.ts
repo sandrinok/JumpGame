@@ -71,7 +71,7 @@ export function createStartScreen(parent: HTMLElement, score: ScoreData): StartS
   card.appendChild(playBtn);
 
   const hint = document.createElement('div');
-  hint.textContent = 'Click canvas after Play for mouse-look · F1 toggles editor';
+  hint.textContent = 'Click the canvas after Play for mouse-look';
   hint.style.cssText = 'margin-top: 20px; font-size: 12px; opacity: 0.5;';
   card.appendChild(hint);
 

@@ -1,11 +1,17 @@
 import { createCamera, createRenderer, handleResize } from './render/renderer';
-import { createGround, createScene } from './render/scene';
+import { createGround, createScene, focusShadow } from './render/scene';
 import { FollowCamera } from './render/followCamera';
 import { startLoop } from './core/loop';
 import { Input } from './core/input';
 import { addStaticGround, initPhysics } from './physics/world';
 import { createCharacter } from './physics/character';
-import { attachCharacterRig, createPlayer, respawnPlayer, updatePlayer } from './game/player';
+import {
+  attachCharacterRig,
+  createPlayer,
+  renderPlayer,
+  respawnPlayer,
+  updatePlayer,
+} from './game/player';
 import { AssetRegistry } from './world/registry';
 import { instantiate, loadLevel } from './world/level';
 import { createHud } from './ui/hud';
@@ -22,15 +28,19 @@ interface EditorApi {
   activeCamera: import('three').PerspectiveCamera | import('three').OrthographicCamera;
   update(dt: number): void;
   onResize(aspect: number): void;
+  toggle(): void;
   onModeChange: ((mode: EditorMode) => void) | null;
 }
 
-const container = document.getElementById('app');
-if (!container) throw new Error('#app not found');
+const appEl = document.getElementById('app');
+if (!appEl) throw new Error('#app not found');
+// Explicitly typed so the non-null narrowing survives into the async editor
+// loader below, which TypeScript otherwise widens back to HTMLElement | null.
+const container: HTMLElement = appEl;
 
 const renderer = createRenderer(container);
 const camera = createCamera(container);
-const scene = createScene();
+const { scene, sun } = createScene();
 createGround(scene);
 
 const input = new Input(renderer.domElement);
@@ -52,8 +62,8 @@ const character = createCharacter(physics, {
   z: levelHandle.level.spawn.pos[2],
 });
 const player = createPlayer(scene, character);
-attachCharacterRig(player, '/assets/character/Universal Base Character/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf', {
-  animationsUrl: '/assets/character/Universal Animation Library Standard/Unreal-Godot/UAL1_Standard.glb',
+attachCharacterRig(player, '/assets/character/player.glb', {
+  animationsUrl: '/assets/character/animations.glb',
 }).catch((e) => {
   console.warn('Character rig failed to load, using debug capsule:', e);
 });
@@ -74,7 +84,14 @@ window.addEventListener('keydown', (e) => {
 });
 
 let editor: EditorApi | null = null;
-if (import.meta.env.DEV) {
+let editorPending = false;
+
+/**
+ * Build the editor. Everything it needs — React, Tailwind, the editor itself —
+ * is imported here rather than at startup, so a player never downloads any of
+ * it and the game does not wait on it before its first frame.
+ */
+async function loadEditor(): Promise<EditorApi> {
   const [{ Editor }, { PhysicsDebugView }, react, reactDom, { EditorRoot }] = await Promise.all([
     import('./editor/editor'),
     import('./physics/debugView'),
@@ -87,20 +104,53 @@ if (import.meta.env.DEV) {
   const dbg = new PhysicsDebugView(scene, physics);
   dbg.exclude(groundCollider);
   e.physicsDebug = dbg;
-  editor = e;
+  e.onModeChange = (mode) => {
+    currentMode = mode;
+    input.lockOnClick = running && mode === 'play';
+    // The start screen is a full-screen overlay at z-index 100. Left up, it
+    // swallows every click meant for the editor — the menus and palette render
+    // but nothing responds.
+    if (mode === 'edit') startScreen.hide();
+    else if (!running) startScreen.show();
+  };
 
   const uiHost = document.createElement('div');
   uiHost.id = 'editor-ui';
   container.appendChild(uiHost);
-  const root = reactDom.createRoot(uiHost);
-  root.render(react.createElement(EditorRoot, { actions: e.getActions() }));
+  reactDom.createRoot(uiHost).render(react.createElement(EditorRoot, { actions: e.getActions() }));
+  return e;
 }
-if (editor) {
-  editor.onModeChange = (mode) => {
-    currentMode = mode;
-    input.lockOnClick = running && mode === 'play';
-  };
+
+/**
+ * F2. On a server with no editor password configured this does nothing at all —
+ * players get no hint that an editor exists.
+ */
+async function toggleEditor(): Promise<void> {
+  if (editor) {
+    editor.toggle();
+    return;
+  }
+  if (editorPending) return;
+  editorPending = true;
+  try {
+    const { getSession, promptLogin } = await import('./editor/auth');
+    const session = await getSession();
+    if (!session.configured) return;
+    if (!session.authenticated && !(await promptLogin(container))) return;
+    editor = await loadEditor();
+    editor.toggle();
+  } catch (e) {
+    console.error('[editor] failed to open:', e);
+  } finally {
+    editorPending = false;
+  }
 }
+
+window.addEventListener('keydown', (e) => {
+  if (e.code !== 'F2') return;
+  e.preventDefault();
+  void toggleEditor();
+});
 
 const startScreen = createStartScreen(container, score);
 startScreen.onPlay = () => {
@@ -118,36 +168,71 @@ window.addEventListener('resize', () => {
   editor?.onResize(container.clientWidth / container.clientHeight);
 });
 
+/** Persist the current run if it beat the record. Safe to call repeatedly. */
+function commitRun(): void {
+  if (runMaxHeight <= score.best) return;
+  score.best = runMaxHeight;
+  saveScore(score);
+  hud.setBest(score.name, score.best);
+}
+
+// A run used to be banked only by falling past killY, so climbing to 40m and
+// then closing the tab threw the whole thing away. pagehide covers closing and
+// navigating; visibilitychange covers switching tabs or apps, which on mobile
+// is often the last event a page gets.
+window.addEventListener('pagehide', commitRun);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') commitRun();
+});
+
 startLoop(
+  // Simulation — fixed 60Hz. Gameplay decisions live here and nowhere else, so
+  // they stay identical on every refresh rate.
   (dt) => {
+    if (currentMode === 'play' && running) {
+      updatePlayer(player, input, dt, followCam.yaw);
+      physics.world.step();
+
+      // Read height from the simulation, not the interpolated visual: a
+      // respawn must trigger on where the player actually is.
+      const y = player.currPos.y;
+      hud.setHeight(y);
+      if (y > runMaxHeight) runMaxHeight = y;
+
+      if (y < levelHandle.level.killY) {
+        commitRun();
+        runMaxHeight = 0;
+        respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
+        hud.flashRespawn();
+        playWindBurst();
+      }
+    }
+    input.endStep();
+  },
+
+  // Presentation — once per rendered frame, at whatever rate the display runs.
+  (alpha, frameDt) => {
     if (currentMode === 'play') {
       if (running) {
-        updatePlayer(player, input, dt, followCam.yaw);
-        physics.world.step();
+        renderPlayer(player, alpha, frameDt);
         followCam.update(input, player.visualRoot.position);
-
-        const y = player.visualRoot.position.y;
-        hud.setHeight(y);
-        if (y > runMaxHeight) runMaxHeight = y;
-
-        if (y < levelHandle.level.killY) {
-          if (runMaxHeight > score.best) {
-            score.best = runMaxHeight;
-            saveScore(score);
-            hud.setBest(score.name, score.best);
-          }
-          runMaxHeight = 0;
-          respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
-          hud.flashRespawn();
-          playWindBurst();
-        }
+        focusShadow(sun, player.visualRoot.position);
+      } else {
+        // Keep the rig breathing behind the start screen. The mixer only ran
+        // once a run had started, so the first thing a visitor saw was the
+        // character frozen in its bind pose, arms out like a mannequin.
+        player.rig?.mixer.update(frameDt);
       }
     } else {
-      editor?.update(dt);
+      editor?.update(frameDt);
+      // Follow the fly-cam instead of the parked player, or the level would be
+      // lit by a shadow frustum sitting wherever the player last stood.
+      if (editor) focusShadow(sun, editor.activeCamera.position);
     }
+    // After the camera has consumed this frame's mouse delta, before the next
+    // frame starts collecting one.
     input.endFrame();
-  },
-  () => {
+
     renderer.render(scene, editor?.activeCamera ?? camera);
     debugHud.sample(renderer);
   },

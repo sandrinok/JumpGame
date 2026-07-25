@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
 export type CharacterState = 'idle' | 'walk' | 'run' | 'jump' | 'fall' | 'land';
 
@@ -17,7 +18,8 @@ export async function loadCharacterRig(
   url: string,
   animationsUrl?: string,
 ): Promise<CharacterRig> {
-  const loader = new GLTFLoader();
+  // Character assets are meshopt-compressed by scripts/optimize-character.mjs.
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const [gltf, animsGltf] = await Promise.all([
     loader.loadAsync(url),
     animationsUrl ? loader.loadAsync(animationsUrl) : Promise.resolve(null),

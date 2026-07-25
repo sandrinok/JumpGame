@@ -22,15 +22,20 @@ export class LevelHandle {
   ) {}
 
   addPlacement(p: Placement): RenderedPlacement | null {
+    // Record the placement before trying to resolve its asset. An unresolvable
+    // one used to be dropped here, which meant opening a level whose manifest
+    // had drifted and pressing Save silently deleted every object it could not
+    // build — the file lost data the editor never showed you.
+    if (!this.level.placements.includes(p)) this.level.placements.push(p);
+
     const asset = this.registry.get(p.id);
     if (!asset) {
-      console.warn(`[level] missing asset: ${p.id}`);
+      console.warn(`[level] missing asset: ${p.id} (placement kept, not rendered)`);
       return null;
     }
     const override = this.level.assetOverrides?.[p.id];
     const r = build(this.scene, this.physics, asset, p, override);
     this.rendered.set(p.uid, r);
-    if (!this.level.placements.includes(p)) this.level.placements.push(p);
     return r;
   }
 
@@ -76,7 +81,13 @@ export class LevelHandle {
     const r = this.rendered.get(uid);
     if (!r) return;
     this.scene.remove(r.group);
-    disposeObject(r.group);
+    // Deliberately no geometry/material disposal. Placements are
+    // Object3D.clone()s of the registry's template, and clone() copies
+    // geometry and material *by reference* — disposing them here freed the
+    // GPU buffers of every other instance of the same asset too, which then
+    // silently re-uploaded on the next frame. The registry owns those
+    // resources for the lifetime of the session; the group holds nothing of
+    // its own.
     this.physics.world.removeRigidBody(r.body);
     this.rendered.delete(uid);
     const i = this.level.placements.findIndex((p) => p.uid === uid);
@@ -85,6 +96,9 @@ export class LevelHandle {
 
   clear(): void {
     for (const uid of [...this.rendered.keys()]) this.removePlacement(uid);
+    // removePlacement only reaches things that were rendered; placements kept
+    // despite a missing asset would otherwise survive a New Level.
+    this.level.placements.length = 0;
   }
 
   replace(next: Level): void {
@@ -139,7 +153,14 @@ function build(
 ): RenderedPlacement {
   const group = new THREE.Group();
   group.userData.uid = p.uid;
-  group.add(asset.template.clone(true));
+  const visual = asset.template.clone(true);
+  visual.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    m.castShadow = true;
+    m.receiveShadow = true;
+  });
+  group.add(visual);
   group.position.set(p.pos[0], p.pos[1], p.pos[2]);
   group.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
   group.scale.set(p.scale[0], p.scale[1], p.scale[2]);
@@ -283,16 +304,6 @@ function collectMeshGeometry(
     offset += pos.count;
   });
   return { vertices: new Float32Array(verts), indices: new Uint32Array(idx) };
-}
-
-function disposeObject(obj: THREE.Object3D): void {
-  obj.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (m.geometry) m.geometry.dispose();
-    const mat = m.material as THREE.Material | THREE.Material[] | undefined;
-    if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
-    else if (mat) mat.dispose();
-  });
 }
 
 export async function loadLevel(url: string): Promise<Level> {

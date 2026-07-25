@@ -3,14 +3,20 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  },
   "scripts": {
     "predev": "node scripts/optimize-assets.mjs",
     "dev": "vite",
     "prebuild": "node scripts/optimize-assets.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "serve": "node server/index.mjs",
+    "set-editor-password": "node scripts/set-editor-password.mjs",
     "typecheck": "tsc --noEmit",
-    "optimize-assets": "node scripts/optimize-assets.mjs"
+    "optimize-assets": "node scripts/optimize-assets.mjs",
+    "optimize-character": "node scripts/optimize-character.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",
@@ -20,12 +26,12 @@
     "@gltf-transform/core": "^4.1.0",
     "@gltf-transform/extensions": "^4.1.0",
     "@gltf-transform/functions": "^4.1.0",
+    "@radix-ui/react-menubar": "^1.1.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/three": "^0.169.0",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.0",
-    "@radix-ui/react-menubar": "^1.1.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "lucide-react": "^0.460.0",

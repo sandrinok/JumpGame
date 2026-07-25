@@ -26,6 +26,15 @@ const SCALE_SNAP = 0.1;
 
 const ORTHO_FRUSTUM = 20;
 
+/** Seconds between collider-debug rebuilds. It is an overlay; 30Hz is plenty. */
+const DEBUG_VIEW_INTERVAL = 1 / 30;
+
+/** y = 0, matching the world ground in render/scene.ts. */
+const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+/** Drag payload used when dragging an asset out of the palette onto the canvas. */
+export const ASSET_DRAG_TYPE = 'application/x-jumpgame-asset';
+
 export class Editor {
   mode: EditorMode = 'play';
   editorCamera: THREE.PerspectiveCamera;
@@ -39,6 +48,8 @@ export class Editor {
   private selected: RenderedPlacement | null = null;
   private gizmoMode: 'translate' | 'rotate' | 'scale' = 'translate';
   private history = new History();
+  private debugAccum = 0;
+  private lastPointer: { x: number; y: number } | null = null;
   private snapEnabled = true;
   /** snapshot of placement transform when a gizmo drag begins */
   private dragStart: { uid: string; pos: Vec3; rot: Vec3; scale: Vec3 } | null = null;
@@ -90,6 +101,11 @@ export class Editor {
 
     window.addEventListener('keydown', (e) => this.onKeyDown(e));
     renderer.domElement.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+    // Remembered so the B / Enter shortcut can place under the mouse too,
+    // rather than guessing a spot in front of the camera.
+    renderer.domElement.addEventListener('pointermove', (e) => {
+      this.lastPointer = { x: e.clientX, y: e.clientY };
+    });
 
     const dropTarget = renderer.domElement;
     dropTarget.addEventListener('dragover', (e) => {
@@ -159,7 +175,15 @@ export class Editor {
   update(dt: number): void {
     if (this.mode !== 'edit') return;
     this.flyCam.update(dt, this.input);
-    this.physicsDebug?.update();
+
+    // update() tears down and rebuilds a mesh per collider, so it is throttled:
+    // this now runs per rendered frame rather than per fixed step, and on a
+    // high-refresh display that would rebuild the whole set 144x a second.
+    this.debugAccum += dt;
+    if (this.debugAccum >= DEBUG_VIEW_INTERVAL) {
+      this.debugAccum = 0;
+      this.physicsDebug?.update();
+    }
     // Keep the proxy aligned with current placement+params (e.g. inspector edits)
     const focus = uiStore.get().colliderFocusUid;
     if (focus && this.colliderProxy && !(this.gizmo as unknown as { dragging: boolean }).dragging) {
@@ -188,12 +212,13 @@ export class Editor {
   }
 
   private onKeyDown(e: KeyboardEvent): void {
-    if (e.code === 'F1') {
-      this.toggle();
-      e.preventDefault();
-      return;
-    }
+    // F2 is owned by main.ts, which handles the auth + lazy-load path before the
+    // Editor even exists.
     if (this.mode !== 'edit') return;
+    // Editor hotkeys are bare letters, so anything typed into a field would
+    // otherwise also fire them — typing "box" in the outliner filter used to
+    // place an asset ('b') and delete the selection ('x').
+    if (isTextEntry(e.target)) return;
 
     const ctrl = e.ctrlKey || e.metaKey;
 
@@ -250,11 +275,29 @@ export class Editor {
     }
   }
 
-  placeAtCursor(assetId: string): void {
-    const cam = this.activeCamera;
-    const target = new THREE.Vector3();
-    cam.getWorldDirection(target);
-    target.multiplyScalar(8).add(cam.position);
+  /**
+   * Place an asset where the user is pointing.
+   *
+   * Rays hit existing placements first, so dropping a crate onto a platform
+   * lands it on the platform rather than through it; then the ground plane;
+   * and only if the ray escapes into the sky does it fall back to a point in
+   * front of the camera. The result is lifted by the asset's own bounding box
+   * so it rests on the surface instead of being buried up to its middle.
+   *
+   * @param at viewport coordinates to place at. Defaults to wherever the mouse
+   *           last was over the canvas, which is what the B / Enter shortcut wants.
+   */
+  placeAtCursor(assetId: string, at?: { clientX: number; clientY: number }): void {
+    const point = at
+      ? this.surfacePoint(at.clientX, at.clientY)
+      : this.lastPointer && this.surfacePoint(this.lastPointer.x, this.lastPointer.y);
+
+    const target = point ?? this.pointInFrontOfCamera();
+    if (point) {
+      const asset = this.registry.get(assetId);
+      if (asset) target.y -= asset.bbox.min.y;
+    }
+
     const p: Placement = {
       id: assetId,
       uid: nextUid(),
@@ -263,6 +306,28 @@ export class Editor {
       scale: [1, 1, 1],
     };
     this.execAdd(p);
+  }
+
+  /** World point under the given viewport coordinates, or null if the ray hits nothing. */
+  private surfacePoint(clientX: number, clientY: number): THREE.Vector3 | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    this.pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.pointer, this.activeCamera);
+
+    const groups = [...this.levelHandle.rendered.values()].map((r) => r.group);
+    const hits = this.raycaster.intersectObjects(groups, true);
+    if (hits.length > 0) return hits[0].point.clone();
+
+    const onGround = new THREE.Vector3();
+    return this.raycaster.ray.intersectPlane(GROUND_PLANE, onGround) ? onGround : null;
+  }
+
+  private pointInFrontOfCamera(distance = 8): THREE.Vector3 {
+    const cam = this.activeCamera;
+    const target = new THREE.Vector3();
+    cam.getWorldDirection(target);
+    return target.multiplyScalar(distance).add(cam.position);
   }
 
   duplicateSelected(): void {
@@ -577,6 +642,14 @@ export class Editor {
   private async onDrop(e: DragEvent): Promise<void> {
     if (this.mode !== 'edit') return;
     e.preventDefault();
+
+    // An asset dragged out of the palette, rather than a file from the desktop.
+    const draggedAsset = e.dataTransfer?.getData(ASSET_DRAG_TYPE);
+    if (draggedAsset) {
+      this.placeAtCursor(draggedAsset, { clientX: e.clientX, clientY: e.clientY });
+      return;
+    }
+
     const files = e.dataTransfer?.files;
     if (!files || files.length === 0) return;
     for (const f of Array.from(files)) {
@@ -858,6 +931,14 @@ export class Editor {
 
 function vec3Eq(a: Vec3, b: Vec3): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+}
+
+/** True when the event target is somewhere the user is typing text. */
+function isTextEntry(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 }
 
 function sameParams(a: ColliderParams | undefined, b: ColliderParams | undefined): boolean {

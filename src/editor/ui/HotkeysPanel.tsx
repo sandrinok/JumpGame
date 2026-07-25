@@ -4,7 +4,7 @@ import { uiStore } from './uiStore';
 import { useEditorUi } from './useEditorUi';
 
 const ROWS: Array<[string, string]> = [
-  ['F1', 'Toggle editor'],
+  ['F2', 'Toggle editor'],
   ['RMB + WASD/QE', 'Fly camera (Shift fast / Alt slow)'],
   ['Scroll while RMB', 'Adjust fly speed'],
   ['LMB', 'Select placement'],

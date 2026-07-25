@@ -42,8 +42,21 @@ export class Input {
     return this.justPressed.has(code);
   }
 
-  endFrame(): void {
+  /**
+   * Call after each fixed simulation step. Edge-triggered keys belong to the
+   * step that consumed them, or a single Space would queue a jump on every
+   * step of the frame.
+   */
+  endStep(): void {
     this.justPressed.clear();
+  }
+
+  /**
+   * Call after each rendered frame. Mouse and wheel deltas accumulate per
+   * frame and are consumed by the camera during render, so they must not be
+   * cleared by a simulation step that may run zero or several times per frame.
+   */
+  endFrame(): void {
     this.mouseDX = 0;
     this.mouseDY = 0;
     this.scrollDY = 0;

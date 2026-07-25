@@ -15,6 +15,8 @@ const AIR_CONTROL = 0.6;
 const ACCEL_GROUND = 60;
 const ACCEL_AIR = 20;
 const TURN_RATE = 12;
+/** Movement below this is float noise, not the controller blocking us. */
+const CONTACT_EPSILON = 1e-4;
 
 export interface Player {
   body: CharacterBody;
@@ -25,6 +27,12 @@ export interface Player {
   velocity: THREE.Vector3;
   grounded: boolean;
   yaw: number;
+  /** Simulation position at the end of the previous fixed step. */
+  prevPos: THREE.Vector3;
+  /** Simulation position at the end of the current fixed step. */
+  currPos: THREE.Vector3;
+  /** Facing at the end of the previous fixed step. */
+  prevYaw: number;
   coyote: number;
   jumpBuffer: number;
   jumping: boolean;
@@ -41,8 +49,13 @@ export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
   const geo = new THREE.CapsuleGeometry(body.radius, body.halfHeight * 2, 8, 16);
   const mat = new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.7 });
   const debugMesh = new THREE.Mesh(geo, mat);
+  debugMesh.castShadow = true;
   // capsule center sits at body center; visualRoot sits at body center too
   visualRoot.add(debugMesh);
+
+  const t = body.body.translation();
+  const start = new THREE.Vector3(t.x, t.y, t.z);
+  visualRoot.position.copy(start);
 
   return {
     body,
@@ -52,6 +65,9 @@ export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
     velocity: new THREE.Vector3(),
     grounded: false,
     yaw: 0,
+    prevPos: start.clone(),
+    currPos: start.clone(),
+    prevYaw: 0,
     coyote: 0,
     jumpBuffer: 0,
     jumping: false,
@@ -71,6 +87,12 @@ export function respawnPlayer(player: Player, pos: [number, number, number], yaw
   player.jumping = false;
   player.jumpTrigger = 0;
   player.landTimer = 0;
+  // Collapse both interpolation endpoints onto the spawn, or the first frame
+  // after a respawn draws the player streaking across the map from wherever
+  // they fell.
+  player.prevPos.set(pos[0], pos[1], pos[2]);
+  player.currPos.set(pos[0], pos[1], pos[2]);
+  player.prevYaw = yaw;
   player.visualRoot.position.set(pos[0], pos[1], pos[2]);
   player.visualRoot.rotation.y = yaw;
 }
@@ -117,6 +139,11 @@ function damp(current: number, target: number, rate: number, dt: number): number
 
 export function updatePlayer(player: Player, input: Input, dt: number, basisYaw: number): void {
   const { body } = player;
+
+  // Snapshot where this step starts, so render() can interpolate towards where
+  // it ends.
+  player.prevPos.copy(player.currPos);
+  player.prevYaw = player.yaw;
 
   const lx = (input.isDown('KeyD') ? 1 : 0) - (input.isDown('KeyA') ? 1 : 0);
   const lz = (input.isDown('KeyS') ? 1 : 0) - (input.isDown('KeyW') ? 1 : 0);
@@ -184,6 +211,16 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
   };
   body.controller.computeColliderMovement(body.collider, desired);
   const corrected = body.controller.computedMovement();
+
+  // Ceiling hit: we asked to rise and the controller refused. Without dropping
+  // the velocity, gravity has to burn off the whole jump before you start
+  // falling, so you hang under the ledge for a moment as if stuck to it.
+  // Horizontal blocking is deliberately left alone — the controller slides
+  // along walls, and zeroing velocity on contact would kill that.
+  if (desired.y > 0 && corrected.y < desired.y - CONTACT_EPSILON && player.velocity.y > 0) {
+    player.velocity.y = 0;
+  }
+
   const t = body.body.translation();
   body.body.setNextKinematicTranslation({
     x: t.x + corrected.x,
@@ -200,9 +237,7 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
     }
   }
 
-  // visual sync
-  player.visualRoot.position.set(t.x + corrected.x, t.y + corrected.y, t.z + corrected.z);
-  player.visualRoot.rotation.y = player.yaw;
+  player.currPos.set(t.x + corrected.x, t.y + corrected.y, t.z + corrected.z);
 
   if (player.rig) {
     const horizSpeed = Math.hypot(player.velocity.x, player.velocity.z);
@@ -215,7 +250,28 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
       justLanded: player.landTimer > 0,
       landTimer: player.landTimer,
     });
+    // Only the state decision belongs to the fixed step; the mixer is advanced
+    // per rendered frame in renderPlayer so limbs do not step at 60Hz.
     setState(player.rig, next);
-    player.rig.mixer.update(dt);
   }
+}
+
+/**
+ * Draw the player somewhere between the last two simulation states.
+ *
+ * @param alpha    0 = previous step, 1 = current step.
+ * @param frameDt  real time since the last frame, for the animation mixer.
+ */
+export function renderPlayer(player: Player, alpha: number, frameDt: number): void {
+  player.visualRoot.position.lerpVectors(player.prevPos, player.currPos, alpha);
+  player.visualRoot.rotation.y = lerpAngle(player.prevYaw, player.yaw, alpha);
+  player.rig?.mixer.update(frameDt);
+}
+
+/** Interpolate around the shortest arc, so a wrap past ±PI does not spin. */
+function lerpAngle(a: number, b: number, t: number): number {
+  let diff = b - a;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  return a + diff * t;
 }

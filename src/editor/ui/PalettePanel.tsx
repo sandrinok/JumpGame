@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './components/card';
 import { Button } from './components/button';
 import { useEditorUi } from './useEditorUi';
 import { useEditorActions } from './actions';
+import { ASSET_DRAG_TYPE } from '../editor';
 
 export function PalettePanel(): JSX.Element | null {
   const { assets, paletteCurrent, paletteVisible } = useEditorUi();
@@ -23,13 +24,35 @@ export function PalettePanel(): JSX.Element | null {
             key={a.id}
             size="sm"
             variant={paletteCurrent === a.id ? 'default' : 'secondary'}
-            className="justify-start font-normal"
+            className="justify-start font-normal cursor-grab active:cursor-grabbing"
+            draggable
+            title={`Drag ${a.id} into the world, or double-click to place it`}
+            onDragStart={(e) => {
+              e.dataTransfer.setData(ASSET_DRAG_TYPE, a.id);
+              e.dataTransfer.effectAllowed = 'copy';
+              actions.selectPaletteId(a.id);
+            }}
             onClick={() => actions.selectPaletteId(a.id)}
+            onDoubleClick={() => actions.placeAtCursor(a.id)}
           >
             {a.id}
           </Button>
         ))}
       </CardContent>
+      {/*
+        Selecting an asset used to be the only thing a click did, with placing
+        hidden behind an unlabelled B / Enter shortcut and the hotkeys panel
+        collapsed by default — so the palette looked broken.
+      */}
+      <div className="px-3 pb-2 pt-1 text-[10px] leading-tight text-muted-foreground border-t border-border">
+        Drag into the world, or double-click.
+        {paletteCurrent && (
+          <>
+            {' '}
+            <span className="text-foreground">B</span> places the selected one where you point.
+          </>
+        )}
+      </div>
     </Card>
   );
 }

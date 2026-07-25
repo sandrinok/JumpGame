@@ -1,44 +1,51 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { writeFile, mkdir } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 
+const LEVEL_NAME = /^[a-zA-Z0-9_-]{1,64}\.json$/;
+
+/**
+ * Dev-only stand-in for server/index.mjs.
+ *
+ * It answers the same two endpoints the production server does, so the client
+ * has exactly one code path for saving. Auth is skipped here on purpose —
+ * you are editing your own checkout on localhost, and typing a password on
+ * every reload would make the editor tedious to work on. To exercise the real
+ * login flow, build and run `npm run serve` instead.
+ */
 function levelSavePlugin(): Plugin {
-  const publicDir = resolve(process.cwd(), 'public');
+  const levelsDir = resolve(process.cwd(), 'public', 'levels');
   return {
     name: 'jumpgame-level-save',
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use('/__save-level', async (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405;
-          res.end('method not allowed');
-          return;
-        }
-        const rel = (req.url ?? '').replace(/^\/+/, '').replace(/\?.*$/, '');
-        if (!rel.endsWith('.json') || rel.includes('..')) {
-          res.statusCode = 400;
-          res.end('bad path');
-          return;
-        }
-        const target = join(publicDir, rel);
-        if (!target.startsWith(publicDir)) {
-          res.statusCode = 400;
-          res.end('outside public');
-          return;
-        }
+      server.middlewares.use('/api/session', (req, res) => {
+        res.statusCode = req.method === 'GET' ? 200 : 405;
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ authenticated: true, configured: true, devMode: true }));
+      });
+
+      server.middlewares.use('/api/level', async (req, res) => {
+        const send = (status: number, body: unknown): void => {
+          res.statusCode = status;
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify(body));
+        };
+        if (req.method !== 'PUT') return send(405, { error: 'method not allowed' });
+
+        const name = decodeURIComponent((req.url ?? '').replace(/^\/+/, '').replace(/\?.*$/, ''));
+        if (!LEVEL_NAME.test(name)) return send(400, { error: 'invalid level name' });
+
         let body = '';
         for await (const chunk of req) body += chunk;
         try {
           JSON.parse(body);
-          await mkdir(dirname(target), { recursive: true });
-          await writeFile(target, body, 'utf8');
-          res.statusCode = 200;
-          res.setHeader('content-type', 'application/json');
-          res.end(JSON.stringify({ ok: true, path: rel }));
+          await mkdir(levelsDir, { recursive: true });
+          await writeFile(join(levelsDir, name), body, 'utf8');
+          send(200, { ok: true, path: name });
         } catch (e) {
-          res.statusCode = 500;
-          res.end(`save failed: ${(e as Error).message}`);
+          send(500, { error: `save failed: ${(e as Error).message}` });
         }
       });
     },
@@ -53,9 +60,22 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    sourcemap: true,
+    // Off for the public build: the maps were ~5.5MB of the deploy and served
+    // the full unminified source to anyone who looked. Flip to true when you
+    // need to debug a production issue.
+    sourcemap: false,
   },
   optimizeDeps: {
+    // Rapier is on the -compat build, which inlines its WebAssembly as base64:
+    // ~2MB of JavaScript the browser has to parse before the first frame.
+    //
+    // The slim @dimforge/rapier3d package was tried with vite-plugin-wasm +
+    // vite-plugin-top-level-await. It builds cleanly and emits the .wasm, but
+    // Rollup drops the side-effect-only call that binds the module, so nothing
+    // ever fetches the file and the first `new World()` throws on undefined
+    // bindings. Forcing moduleSideEffects for the package did not help either.
+    // Worth retrying after a Rapier or Vite major bump: it is ~200KB gzip and
+    // takes JS-to-parse from 2MB down to ~130KB.
     exclude: ['@dimforge/rapier3d-compat'],
   },
 });

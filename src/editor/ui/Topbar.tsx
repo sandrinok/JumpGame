@@ -51,7 +51,7 @@ export function Topbar(): JSX.Element {
             <MenubarSeparator />
             <MenubarItem onSelect={triggerImport}>Import GLB…</MenubarItem>
             <MenubarSeparator />
-            <MenubarItem onSelect={a.exitEditor}>Exit Editor <MenubarShortcut>F1</MenubarShortcut></MenubarItem>
+            <MenubarItem onSelect={a.exitEditor}>Exit Editor <MenubarShortcut>F2</MenubarShortcut></MenubarItem>
           </MenubarContent>
         </MenubarMenu>
 
@@ -158,7 +158,7 @@ export function Topbar(): JSX.Element {
           <MenubarTrigger>Help</MenubarTrigger>
           <MenubarContent>
             <MenubarItem disabled>Version 0.1</MenubarItem>
-            <MenubarItem disabled>F1 toggles editor</MenubarItem>
+            <MenubarItem disabled>F2 toggles editor</MenubarItem>
             <MenubarItem disabled>RMB + WASD/QE = fly cam</MenubarItem>
           </MenubarContent>
         </MenubarMenu>

@@ -26,6 +26,7 @@ import {
   prune,
   weld,
   resample,
+  metalRough,
   textureCompress,
   meshopt,
 } from '@gltf-transform/functions';
@@ -39,6 +40,13 @@ const OUT = path.resolve(process.argv[3] ?? 'public/assets/3d');
 const MANIFEST = path.resolve('public/assets/manifest.json');
 const PUBLIC_PREFIX = '/assets/3d';
 const MAX_TEX = 2048;
+/**
+ * Subdirectories of SRC this script ignores. The player character is a rig with
+ * its own requirements (skeleton, clip set, no manifest entry) and is handled by
+ * scripts/optimize-character.mjs — without this it would land in the level
+ * palette as a few dozen placeable props.
+ */
+const EXCLUDE_DIRS = new Set(['character']);
 
 async function main() {
   await mkdir(OUT, { recursive: true });
@@ -81,6 +89,11 @@ async function main() {
     try {
       const doc = await io.read(src);
       await doc.transform(
+        // Some Sketchfab downloads still use KHR_materials_pbrSpecularGlossiness,
+        // which three.js dropped support for — it logs "Unknown extension" and
+        // renders the model with default grey materials. Convert to metallic
+        // roughness before anything touches the textures.
+        metalRough(),
         dedup(),
         prune(),
         weld(),
@@ -123,8 +136,10 @@ async function collectGltfFiles(dir) {
     }
     for (const e of entries) {
       const p = path.join(d, e.name);
-      if (e.isDirectory()) await walk(p);
-      else if (/\.(glb|gltf)$/i.test(e.name)) out.push(p);
+      if (e.isDirectory()) {
+        if (d === dir && EXCLUDE_DIRS.has(e.name)) continue;
+        await walk(p);
+      } else if (/\.(glb|gltf)$/i.test(e.name)) out.push(p);
     }
   };
   await walk(dir);
