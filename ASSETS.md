@@ -51,6 +51,11 @@ A pack with meaningless object names (`Cube.014`, `Object_23`) is a poor
 candidate — you get dozens of palette entries nobody can identify. Check with
 `--dry` first.
 
+**Deliberately not imported:** `packs/hypercasual__platformer_assets__gameready.glb`
+splits cleanly into 90 props, but every one is named `Cube.007` or `Object_23`.
+In a text-only palette that is 90 unfindable rows burying everything else. The
+geometry is fine — revisit it if the palette ever grows thumbnails.
+
 Nothing under `3dassets/` is committed — only the optimized output is. Keep the
 raw downloads, though: they are the only way to re-run the pipeline with
 different settings.
