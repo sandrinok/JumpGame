@@ -8,7 +8,11 @@ export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  // The sky is a physical-scattering shader emitting true HDR radiance, which
+  // is far brighter than the flat colour it replaced. Exposure is the master
+  // control for the whole scene now; at 1.0 the sky blows out to white and the
+  // shading goes flat.
+  renderer.toneMappingExposure = 0.5;
   container.appendChild(renderer.domElement);
   return renderer;
 }

@@ -109,6 +109,11 @@ export function createSessionToken() {
 }
 
 export function verifySessionToken(token) {
+  // No secret configured means no session can be valid. Without this guard a
+  // leftover cookie from an earlier install makes createHmac throw on a null
+  // key, and every request — including plain GETs — answers 500 instead of
+  // simply reporting that nobody is logged in.
+  if (!process.env.SESSION_SECRET) return false;
   if (!token || typeof token !== 'string') return false;
   const [payload, mac] = token.split('.');
   if (!payload || !mac) return false;

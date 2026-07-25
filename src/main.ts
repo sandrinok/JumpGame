@@ -41,7 +41,7 @@ const container: HTMLElement = appEl;
 
 const renderer = createRenderer(container);
 const camera = createCamera(container);
-const { scene, sun } = createScene();
+const { scene, sun } = createScene(renderer);
 createGround(scene);
 
 const input = new Input(renderer.domElement);
