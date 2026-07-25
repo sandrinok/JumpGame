@@ -24,13 +24,18 @@ A finished build is ~15MB, almost all of it `public/assets/`.
 ## First deploy
 
 ```sh
-git clone <repo> /srv/jumpgame && cd /srv/jumpgame
+git clone --depth 1 <repo> /srv/jumpgame && cd /srv/jumpgame
 npm ci
 npm run build            # tsc --noEmit && vite build -> dist/
 
 mkdir -p /var/lib/jumpgame/levels
 npm run set-editor-password   # type a password; writes .env (mode 600)
 ```
+
+`--depth 1` is worth it here: the working tree is ~13MB but the full history
+is ~75MB, because earlier commits still contain the raw asset pack that was
+removed when the build was slimmed down. The server has no use for that
+history, and `git pull` on a shallow clone works fine for updates.
 
 Then set the runtime config. Either put these in `.env` next to the generated
 password lines, or pass them as real environment variables:
