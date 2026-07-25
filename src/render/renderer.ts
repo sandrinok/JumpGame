@@ -13,6 +13,10 @@ export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
   // control for the whole scene now; at 1.0 the sky blows out to white and the
   // shading goes flat.
   renderer.toneMappingExposure = 0.5;
+  // The render loop resets these once per frame; see main.ts. Left on auto,
+  // every pass of the post-processing chain would wipe the previous one's
+  // numbers before anything could read them.
+  renderer.info.autoReset = false;
   container.appendChild(renderer.domElement);
   return renderer;
 }

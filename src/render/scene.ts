@@ -22,9 +22,17 @@ const SUN_OFFSET = SUN_DIRECTION.clone().multiplyScalar(SUN_DISTANCE);
  */
 const SKY_RADIUS = 900;
 
+/** Cloud deck: high enough to read as sky, inside the camera's far plane. */
+const CLOUD_ALTITUDE = 165;
+const CLOUD_SPAN = 1500;
+/** World units per second the deck drifts. Barely perceptible on purpose. */
+const CLOUD_DRIFT = 0.45;
+
 export interface SceneSetup {
   scene: THREE.Scene;
   sun: THREE.DirectionalLight;
+  /** Advance the cloud drift. Call once per rendered frame. */
+  updateSky(dt: number): void;
 }
 
 export function createScene(renderer: THREE.WebGLRenderer): SceneSetup {
@@ -92,7 +100,108 @@ export function createScene(renderer: THREE.WebGLRenderer): SceneSetup {
   scene.add(sun);
   scene.add(sun.target);
 
-  return { scene, sun };
+  const clouds = createCloudDeck();
+  scene.add(clouds);
+
+  return {
+    scene,
+    sun,
+    updateSky(dt) {
+      clouds.position.x += CLOUD_DRIFT * dt;
+      // Wrap on the texture's world period so the drift never runs away and
+      // the seam never arrives.
+      if (clouds.position.x > CLOUD_SPAN) clouds.position.x -= CLOUD_SPAN;
+    },
+  };
+}
+
+/**
+ * A single transparent quad standing in for a cloud layer.
+ *
+ * One draw call and no per-frame work beyond a position nudge, which is what
+ * makes it affordable — particles or volumetrics would cost real frame time
+ * for something you glance at. The texture carries its own radial alpha
+ * falloff so the quad has no visible edge; without it the deck ends in a hard
+ * line across the sky.
+ */
+function createCloudDeck(): THREE.Mesh {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, size, size);
+
+  let seed = 20260725;
+  const rand = (): number => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+
+  // Clumps of overlapping soft discs: cheap cumulus. Larger, sparser blobs
+  // first, then smaller ones packed around them so edges look eroded rather
+  // than like a row of circles.
+  for (const [clumps, puffs, spread, radius, alpha] of [
+    [7, 26, 150, 62, 0.13],
+    [11, 20, 95, 38, 0.115],
+    [16, 14, 55, 20, 0.1],
+  ] as const) {
+    for (let c = 0; c < clumps; c++) {
+      const cx = rand() * size;
+      const cy = rand() * size;
+      for (let p = 0; p < puffs; p++) {
+        const x = cx + (rand() - 0.5) * spread;
+        const y = cy + (rand() - 0.5) * spread * 0.55;
+        const r = radius * (0.55 + rand() * 0.75);
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, `rgba(255,255,255,${alpha})`);
+        g.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.5})`);
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Radial falloff so the quad dissolves before its own border.
+  ctx.globalCompositeOperation = 'destination-in';
+  // Hold full opacity well out towards the rim: the visible band of sky starts
+  // only ~25 degrees up, and a fade that begins near the centre leaves clouds
+  // visible nowhere except straight overhead.
+  const fade = ctx.createRadialGradient(size / 2, size / 2, size * 0.34, size / 2, size / 2, size * 0.5);
+  fade.addColorStop(0, 'rgba(0,0,0,1)');
+  fade.addColorStop(0.6, 'rgba(0,0,0,0.7)');
+  fade.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(CLOUD_SPAN, CLOUD_SPAN),
+    new THREE.MeshBasicMaterial({
+      map: texture,
+      // Deliberately above 1. Post-processing renders everything into a linear
+      // HDR buffer and tone maps at the end, so plain white is only 1.0 of
+      // radiance — dimmer than the sky shader behind it, which made the clouds
+      // read as faint grey smudges or vanish entirely. This puts them above
+      // the sky so they read as lit cloud.
+      color: new THREE.Color(3.4, 3.4, 3.5),
+      transparent: true,
+      depthWrite: false,
+      // Unlit and unfogged: clouds are sky, not geometry sitting in the haze.
+      fog: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  mesh.rotation.x = Math.PI / 2;
+  mesh.position.y = CLOUD_ALTITUDE;
+  // Drawn after the sky dome, before everything solid.
+  mesh.renderOrder = -1;
+  return mesh;
 }
 
 /**

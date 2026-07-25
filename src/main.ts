@@ -1,5 +1,6 @@
 import { createCamera, createRenderer, handleResize } from './render/renderer';
 import { createGround, createScene, focusShadow } from './render/scene';
+import { createPostFx } from './render/postFx';
 import { FollowCamera } from './render/followCamera';
 import { startLoop } from './core/loop';
 import { Input } from './core/input';
@@ -41,8 +42,9 @@ const container: HTMLElement = appEl;
 
 const renderer = createRenderer(container);
 const camera = createCamera(container);
-const { scene, sun } = createScene(renderer);
+const { scene, sun, updateSky } = createScene(renderer);
 createGround(scene);
+const postFx = createPostFx(renderer, scene, camera);
 
 const input = new Input(renderer.domElement);
 const followCam = new FollowCamera(camera);
@@ -175,6 +177,7 @@ input.lockOnClick = false;
 handleResize(renderer, camera, container);
 window.addEventListener('resize', () => {
   editor?.onResize(container.clientWidth / container.clientHeight);
+  postFx.setSize(container.clientWidth, container.clientHeight);
 });
 
 /** Persist the current run if it beat the record. Safe to call repeatedly. */
@@ -242,7 +245,13 @@ startLoop(
     // frame starts collecting one.
     input.endFrame();
 
-    renderer.render(scene, editor?.activeCamera ?? camera);
+    updateSky(frameDt);
+    // renderer.info resets on every draw call, and the composer issues several
+    // per frame — so sampling after it reported only the final fullscreen
+    // quad ("draws 1 · tris 1"). Reset once per frame instead and let the
+    // counters accumulate across every pass, which is the real cost anyway.
+    renderer.info.reset();
+    postFx.render(editor?.activeCamera ?? camera);
     debugHud.sample(renderer);
   },
 );
