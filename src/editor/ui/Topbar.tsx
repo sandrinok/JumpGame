@@ -114,6 +114,16 @@ export function Topbar(): JSX.Element {
             </MenubarSub>
             <MenubarSeparator />
             <MenubarCheckboxItem
+              checked={ui.fogEnabled}
+              onSelect={(e) => {
+                e.preventDefault();
+                a.setFog(!ui.fogEnabled);
+              }}
+            >
+              Distance fog <MenubarShortcut>F</MenubarShortcut>
+            </MenubarCheckboxItem>
+            <MenubarSeparator />
+            <MenubarCheckboxItem
               checked={ui.paletteVisible}
               onSelect={(e) => {
                 e.preventDefault();

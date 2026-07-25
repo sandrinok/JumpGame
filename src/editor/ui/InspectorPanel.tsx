@@ -57,11 +57,13 @@ export function InspectorPanel(): JSX.Element {
             />
             <Vec3Input
               label="Rot°"
+              step={1}
               value={toDeg(p.rot)}
               onChange={(v) => v && actions.changeTransform(undefined, toRad(v), undefined)}
             />
             <Vec3Input
               label="Scale"
+              step={0.01}
               value={p.scale}
               onChange={(v) => v && actions.changeTransform(undefined, undefined, v)}
             />
@@ -109,11 +111,13 @@ export function InspectorPanel(): JSX.Element {
                 />
                 <Vec3Input
                   label="Size"
+                  step={0.01}
                   value={params.size}
                   onChange={(v) => updateParams({ ...params, size: v }, actions, override?.params)}
                 />
                 <Vec3Input
                   label="Rot°"
+                  step={1}
                   value={params.rot ? toDeg(params.rot) : undefined}
                   onChange={(v) => updateParams({ ...params, rot: v ? toRad(v) : undefined }, actions, override?.params)}
                 />

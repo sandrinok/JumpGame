@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import type { ColliderParams, ColliderShape } from '../../world/types';
 import type { DebugMode } from '../../physics/debugView';
 import type { ViewName } from '../cameraController';
+import type { GizmoMode } from './uiStore';
 
 export interface EditorActions {
   selectPaletteId(id: string | null): void;
@@ -23,6 +24,11 @@ export interface EditorActions {
   // view
   setColliderView(mode: DebugMode): void;
   setSnap(enabled: boolean): void;
+  setGizmoMode(mode: GizmoMode): void;
+  setFog(enabled: boolean): void;
+  /** Collapse every edit until endEdit() into a single undo step. */
+  beginEdit(): void;
+  endEdit(label: string): void;
   exitEditor(): void;
   // outliner
   selectByUid(uid: string): void;
@@ -52,6 +58,10 @@ const noop: EditorActions = {
   deleteSelected: () => undefined,
   setColliderView: () => undefined,
   setSnap: () => undefined,
+  setGizmoMode: () => undefined,
+  setFog: () => undefined,
+  beginEdit: () => undefined,
+  endEdit: () => undefined,
   exitEditor: () => undefined,
   selectByUid: () => undefined,
   toggleHidden: () => undefined,

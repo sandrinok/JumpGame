@@ -4,7 +4,8 @@ A third-person 3D platformer — climb as high as you can without falling — wi
 built-in level editor. Three.js for rendering, Rapier for physics, TypeScript
 throughout.
 
-For putting it on a server, see [DEPLOY.md](DEPLOY.md).
+For putting it on a server, see [DEPLOY.md](DEPLOY.md). For adding 3D models,
+see [ASSETS.md](ASSETS.md).
 
 ## Running it
 

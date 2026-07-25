@@ -9,7 +9,7 @@ import { EditorCameraController, type ViewName } from './cameraController';
 import type { Input } from '../core/input';
 import type { ColliderShape, ColliderParams } from '../world/types';
 import type { PhysicsDebugView } from '../physics/debugView';
-import { uiStore } from './ui/uiStore';
+import { uiStore, type GizmoMode } from './ui/uiStore';
 import type { EditorActions } from './ui/actions';
 
 export type EditorMode = 'play' | 'edit';
@@ -50,6 +50,8 @@ export class Editor {
   private history = new History();
   private debugAccum = 0;
   private lastPointer: { x: number; y: number } | null = null;
+  /** The scene's own fog, kept so play mode gets it back after editing. */
+  private readonly playFog: THREE.Scene['fog'];
   private snapEnabled = true;
   /** snapshot of placement transform when a gizmo drag begins */
   private dragStart: { uid: string; pos: Vec3; rot: Vec3; scale: Vec3 } | null = null;
@@ -62,12 +64,14 @@ export class Editor {
 
   constructor(
     private renderer: THREE.WebGLRenderer,
-    scene: THREE.Scene,
+    private scene: THREE.Scene,
     private gameCamera: THREE.PerspectiveCamera,
     private levelHandle: LevelHandle,
     private registry: AssetRegistry,
     private input: Input,
   ) {
+    this.playFog = scene.fog;
+
     this.editorCamera = new THREE.PerspectiveCamera(60, gameCamera.aspect, 0.1, 1000);
     this.editorCamera.position.set(15, 15, 15);
     this.editorCamera.lookAt(0, 0, 0);
@@ -159,12 +163,14 @@ export class Editor {
     if (mode === 'play') {
       this.deselect();
       this.flyCam.release();
+      this.scene.fog = this.playFog;
       if (document.pointerLockElement) document.exitPointerLock();
     } else {
       if (document.pointerLockElement) document.exitPointerLock();
       this.editorCamera.position.copy(this.gameCamera.position);
       this.editorCamera.quaternion.copy(this.gameCamera.quaternion);
       this.flyCam.syncFromCamera();
+      this.setFog(uiStore.get().fogEnabled);
     }
   }
 
@@ -250,9 +256,15 @@ export class Editor {
       return;
     }
 
+    // While the right mouse button is held the letter keys are flight controls,
+    // not tool shortcuts. Without this, flying backwards with S silently
+    // switched the gizmo to scale, and Q/E/W/A/D behaved just as badly.
+    if (this.flyCam.isLooking) return;
+
     if (e.code === 'KeyG' || e.code === 'KeyT') this.setGizmoMode('translate');
     else if (e.code === 'KeyR') this.setGizmoMode('rotate');
     else if (e.code === 'KeyS') this.setGizmoMode('scale');
+    else if (e.code === 'KeyF') this.setFog(!uiStore.get().fogEnabled);
     else if (e.code === 'Delete' || e.code === 'KeyX') this.deleteSelected();
     else if (e.code === 'Escape') {
       if (uiStore.get().colliderFocusUid) this.exitColliderFocus();
@@ -542,6 +554,10 @@ export class Editor {
       deleteSelected: () => this.deleteSelected(),
       setColliderView: (m) => this.setColliderView(m),
       setSnap: (v) => this.setSnap(v),
+      setGizmoMode: (m) => this.setGizmoMode(m),
+      setFog: (v) => this.setFog(v),
+      beginEdit: () => this.history.beginBatch(),
+      endEdit: (label) => this.history.endBatch(label),
       exitEditor: () => this.setMode('play'),
       selectByUid: (uid) => this.selectByUid(uid),
       toggleHidden: (uid) => this.toggleHidden(uid),
@@ -634,9 +650,22 @@ export class Editor {
     });
   }
 
-  private setGizmoMode(m: 'translate' | 'rotate' | 'scale'): void {
+  setGizmoMode(m: GizmoMode): void {
     this.gizmoMode = m;
     this.gizmo.setMode(m);
+    uiStore.set({ gizmoMode: m });
+  }
+
+  /**
+   * Toggle the scene fog while editing.
+   *
+   * The fog is tuned for play, where it sells distance. In the editor it just
+   * hides the far half of the level behind a haze while you are trying to place
+   * things in it, so it starts off and is restored on the way back to play.
+   */
+  setFog(enabled: boolean): void {
+    this.scene.fog = enabled ? this.playFog : null;
+    uiStore.set({ fogEnabled: enabled });
   }
 
   private async onDrop(e: DragEvent): Promise<void> {

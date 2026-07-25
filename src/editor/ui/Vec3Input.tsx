@@ -1,59 +1,42 @@
-import { useEffect, useState } from 'react';
-import { Input } from './components/input';
+import { ScrubInput } from './ScrubInput';
 import type { Vec3 } from '../../world/types';
 
 interface Props {
   label: string;
   value: Vec3 | undefined;
+  /** Units per pixel while dragging a component. */
+  step?: number;
   onChange(v: Vec3 | undefined): void;
 }
 
-export function Vec3Input({ label, value, onChange }: Props): JSX.Element {
-  const [text, setText] = useState<[string, string, string]>(toText(value));
+const AXIS_TINT = ['text-red-400', 'text-green-400', 'text-blue-400'];
 
-  useEffect(() => {
-    setText(toText(value));
-  }, [value]);
-
-  const commit = (i: number, raw: string): void => {
-    const next: [string, string, string] = [...text] as [string, string, string];
-    next[i] = raw;
-    setText(next);
-    const allBlank = next.every((s) => s.trim() === '');
-    if (allBlank) {
-      onChange(undefined);
-      return;
-    }
-    const parsed = next.map((s) => {
-      const t = s.trim();
-      if (t === '') return 0;
-      const n = parseFloat(t);
-      return Number.isFinite(n) ? n : 0;
-    }) as Vec3;
-    onChange(parsed);
+export function Vec3Input({ label, value, step = 0.05, onChange }: Props): JSX.Element {
+  const setAxis = (i: number, n: number): void => {
+    // Collider params start out undefined (meaning "use the derived default"),
+    // so editing one axis has to materialise the whole vector.
+    const next: Vec3 = value ? ([...value] as Vec3) : [0, 0, 0];
+    next[i] = n;
+    onChange(next);
   };
 
   return (
     <div className="flex items-center gap-1.5">
-      <div className="w-12 shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="w-12 shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
       {[0, 1, 2].map((i) => (
-        <Input
-          key={i}
-          value={text[i]}
-          onChange={(e) => commit(i, e.currentTarget.value)}
-          placeholder="–"
-          className="text-center"
-        />
+        <div key={i} className="relative flex-1">
+          {/* Axis tint: three identical boxes makes it far too easy to scrub
+              the wrong one. */}
+          <span
+            className={`pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 text-[9px] font-mono ${AXIS_TINT[i]}`}
+          >
+            {'XYZ'[i]}
+          </span>
+          <ScrubInput value={value?.[i]} step={step} onChange={(n) => setAxis(i, n)} placeholder="–" />
+        </div>
       ))}
     </div>
   );
-}
-
-function toText(v: Vec3 | undefined): [string, string, string] {
-  if (!v) return ['', '', ''];
-  return [round(v[0]), round(v[1]), round(v[2])];
-}
-
-function round(n: number): string {
-  return (Math.round(n * 1000) / 1000).toString();
 }

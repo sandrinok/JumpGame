@@ -67,6 +67,11 @@ export class EditorCameraController {
     }, { passive: false });
   }
 
+  /** True while the right mouse button is held for fly-look. */
+  get isLooking(): boolean {
+    return this.looking;
+  }
+
   /** Initialize yaw/pitch from camera's current world rotation. */
   syncFromCamera(): void {
     const e = new THREE.Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');

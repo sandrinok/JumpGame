@@ -1,0 +1,80 @@
+# Adding models
+
+## The workflow
+
+1. Drop the `.glb` / `.gltf` (and its textures) anywhere under `3dassets/`.
+2. `npm run optimize-assets`
+3. It writes an optimized `.glb` to `public/assets/3d/` and appends an entry to
+   `public/assets/manifest.json`. Existing entries are never touched, so re-runs
+   are safe.
+4. The asset shows up in the editor palette. Drag it into the world.
+
+Nothing under `3dassets/` is committed — only the optimized output is. Keep the
+raw downloads, though: they are the only way to re-run the pipeline with
+different settings.
+
+## What actually works in this game
+
+The pipeline caps textures at 2048px, converts them to WebP, and meshopt-
+compresses geometry, so a 40MB download usually lands around 1–2MB. That part
+is handled. What it cannot fix:
+
+**Collider shape matters more than polycount.** New assets default to
+`collider: trimesh` — exact, but the most expensive shape and the least
+forgiving to land on. For anything you jump *onto*, switch it to Box or Convex
+in the inspector (it applies to every instance of that asset). Keep trimesh for
+scenery you only brush past.
+
+**Avoid photoscans.** Anything tagged "photoscanned" or "photogrammetry" comes
+with dense, irregular geometry and a bounding box that rarely matches what you
+see. `concrete_road_barrier_photoscanned` in this project is the cautionary
+example.
+
+**Watch the scale.** Models arrive in wildly different units — some are 100x
+too big, some are millimetres. That is fine, the editor scales placements, but
+a prop you have to scale by 0.001 usually has other problems too.
+
+**Silhouette over detail.** From a platformer camera you read shape, not
+texture. A clean chunky object beats a detailed one every time.
+
+## Licensing — read this before publishing
+
+Most free Sketchfab models are **CC-BY**: free to use commercially, but they
+*require* visible attribution. The game is deployed publicly and currently
+credits nobody.
+
+Either prefer **CC0** models (no attribution required — filter for it on
+Sketchfab), or add a credits screen. Until one exists, CC-BY assets on the live
+site are a licence violation, not a grey area.
+
+Sketchfab's download dialog has a copy-paste attribution string for every
+model. If you collect those as you go, building the credits screen later is
+trivial; reconstructing them afterwards is not.
+
+## Places to look
+
+Packs first — one download, many props, one consistent art style, which matters
+more than it sounds when props sit next to each other:
+
+- [Ultimate Platformer Pack (100+ models), quaternius](https://sketchfab.com/3d-models/ultimate-platformer-pack-100-models-8e016bc1b79f4c6aa58d430daa299f1e)
+  — **CC0**, purpose-built for platformers, includes moving platforms and
+  hazards. The best starting point by a distance.
+- [Simple Cartoon Platformer Pack, SimplePolygon](https://sketchfab.com/3d-models/free-simple-cartoon-platformer-pack-b25da5c882ee42d19b032822dd04e12b)
+  — CC-BY-ND. Note the **ND**: no modifications, which arguably includes
+  re-encoding through the optimizer. Check before using.
+- [25 Low Poly Props, Your 3D Character](https://sketchfab.com/3d-models/free-25-low-poly-props-game-ready-ee1a3701499b4c4c92afaaeedac86bba)
+- [HyperCasual Platformer Assets, DevPoly3D](https://sketchfab.com/3d-models/hypercasual-platformer-assets-gameready-71f9f44e4d734702b4567a81bbafa784)
+  — ramps, rings, obstacles.
+
+For the oversized-everyday-object look this level already has (rubber duck,
+sushi, cookiecat, pizza truck), browse these tags and filter to **Downloadable +
+CC0**:
+
+- [everyday-objects](https://sketchfab.com/tags/everyday-objects)
+- [funny](https://sketchfab.com/tags/funny)
+- [low-poly-game-assets](https://sketchfab.com/tags/low-poly-game-assets)
+
+Search terms that reliably surface jumpable, silly props: *low poly food*,
+*kawaii*, *desk clutter*, *breakfast*, *arcade cabinet*, *traffic props*,
+*bathroom*, *kitchen appliance*, *garden gnome*, *musical instrument*,
+*stationery*.

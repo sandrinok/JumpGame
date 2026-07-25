@@ -3,6 +3,8 @@ import type { RenderedPlacement } from '../../world/level';
 import type { DebugMode } from '../../physics/debugView';
 import type { AssetColliderOverride, Placement } from '../../world/types';
 
+export type GizmoMode = 'translate' | 'rotate' | 'scale';
+
 /**
  * Editor UI state shared between the (TS) Editor controller and the (React)
  * UI tree. Editor writes; UI subscribes and re-renders.
@@ -20,6 +22,10 @@ export interface EditorUiState {
   /** Force re-render seed when placement transform mutates externally */
   selectionVersion: number;
   snapEnabled: boolean;
+  /** Active transform gizmo. Mirrors Editor.gizmoMode so the toolbar can show it. */
+  gizmoMode: GizmoMode;
+  /** Scene fog. Off by default in the editor so distant geometry stays readable. */
+  fogEnabled: boolean;
   colliderView: DebugMode;
   /** uids that are hidden in editor (not persisted) */
   hidden: Set<string>;
@@ -48,6 +54,8 @@ const initial: EditorUiState = {
   selectionAsset: null,
   selectionVersion: 0,
   snapEnabled: true,
+  gizmoMode: 'translate',
+  fogEnabled: false,
   colliderView: 'off',
   hidden: new Set(),
   locked: new Set(),

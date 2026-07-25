@@ -6,6 +6,7 @@ import { Topbar } from './Topbar';
 import { Outliner } from './Outliner';
 import { FocusBanner } from './FocusBanner';
 import { HotkeysPanel } from './HotkeysPanel';
+import { ToolBar } from './ToolBar';
 
 interface Props {
   actions: EditorActions;
@@ -18,6 +19,7 @@ export function EditorRoot({ actions }: Props): JSX.Element | null {
     <EditorActionsContext.Provider value={actions}>
       <div className="editor-ui-root">
         <Topbar />
+        <ToolBar />
         <FocusBanner />
         <PalettePanel />
         <HotkeysPanel />
