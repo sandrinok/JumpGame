@@ -55,6 +55,9 @@ await registry.loadManifest('/assets/manifest.json');
 const LEVEL_PATH = '/levels/dev.json';
 const level = await loadLevel(LEVEL_PATH);
 setLevelSource(LEVEL_PATH);
+// Only what this level actually places. The rest of the library is downloaded
+// when the editor opens, so a player never waits on assets they cannot see.
+await registry.resolveIds(level.placements.map((p) => p.id));
 const levelHandle = instantiate(scene, physics, registry, level);
 
 const character = createCharacter(physics, {
@@ -93,6 +96,8 @@ let editorPending = false;
  * it and the game does not wait on it before its first frame.
  */
 async function loadEditor(): Promise<EditorApi> {
+  // The palette needs the whole library, which the game deliberately did not
+  // download at startup.
   const [{ Editor }, { PhysicsDebugView }, react, reactDom, { EditorRoot }] = await Promise.all([
     import('./editor/editor'),
     import('./physics/debugView'),
@@ -100,6 +105,7 @@ async function loadEditor(): Promise<EditorApi> {
     import('react-dom/client'),
     import('./editor/ui/EditorRoot'),
     import('./editor.css'),
+    registry.resolveAll(),
   ]);
   const e = new Editor(renderer, scene, camera, levelHandle, registry, input);
   const dbg = new PhysicsDebugView(scene, physics);

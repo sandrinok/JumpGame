@@ -41,12 +41,18 @@ const MANIFEST = path.resolve('public/assets/manifest.json');
 const PUBLIC_PREFIX = '/assets/3d';
 const MAX_TEX = 2048;
 /**
- * Subdirectories of SRC this script ignores. The player character is a rig with
- * its own requirements (skeleton, clip set, no manifest entry) and is handled by
- * scripts/optimize-character.mjs — without this it would land in the level
- * palette as a few dozen placeable props.
+ * Subdirectories of SRC this script ignores.
+ *
+ * `character` is the player rig: a skeleton and clip set with its own
+ * requirements, handled by scripts/optimize-character.mjs. Without this it
+ * would land in the level palette as a few dozen placeable body parts.
+ *
+ * `packs` holds multi-object asset packs, which are useless as a single
+ * placement — the whole pack would drop into the level as one object. Run
+ * scripts/split-pack.mjs on those; it writes the individual props to the
+ * SRC root, where they are picked up normally.
  */
-const EXCLUDE_DIRS = new Set(['character']);
+const EXCLUDE_DIRS = new Set(['character', 'packs']);
 
 async function main() {
   await mkdir(OUT, { recursive: true });

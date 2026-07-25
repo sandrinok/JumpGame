@@ -15,6 +15,8 @@ export interface ResolvedAsset {
 export class AssetRegistry {
   private byId = new Map<string, ResolvedAsset>();
   private gltfLoader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+  /** Manifest entries that have not been downloaded yet. */
+  private pending = new Map<string, ManifestEntry>();
 
   get(id: string): ResolvedAsset | undefined {
     return this.byId.get(id);
@@ -24,11 +26,36 @@ export class AssetRegistry {
     return [...this.byId.values()];
   }
 
+  /**
+   * Read the manifest without downloading anything.
+   *
+   * Resolving every entry up front meant a player waited on the whole asset
+   * library — around 9MB across 130 files — before the game could start, when
+   * a level uses a handful of them and the rest exist only for the editor's
+   * palette. Call resolveIds() for what a level needs, resolveAll() when the
+   * editor opens.
+   */
   async loadManifest(url: string): Promise<void> {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`manifest ${url}: ${res.status}`);
     const manifest = (await res.json()) as Manifest;
-    await Promise.all(manifest.entries.map((e) => this.resolveEntry(e)));
+    for (const entry of manifest.entries) this.pending.set(entry.id, entry);
+  }
+
+  /** Download and prepare specific assets. Already-resolved ids are skipped. */
+  async resolveIds(ids: Iterable<string>): Promise<void> {
+    const todo = [...new Set(ids)].filter((id) => !this.byId.has(id) && this.pending.has(id));
+    await Promise.all(todo.map((id) => this.resolveEntry(this.pending.get(id)!)));
+  }
+
+  /** Download everything the manifest lists. Used by the editor palette. */
+  async resolveAll(): Promise<void> {
+    await this.resolveIds(this.pending.keys());
+  }
+
+  /** Ids known to the manifest, resolved or not. */
+  knownIds(): string[] {
+    return [...this.pending.keys()];
   }
 
   /** Add an asset from a parsed gltf scene (e.g., from drag-drop) */

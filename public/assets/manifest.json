@@ -201,6 +201,1238 @@
       "tags": [
         "imported"
       ]
+    },
+    {
+      "id": "apoc_object",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_object.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_object_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_object_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_object_3",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_object_3.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_boxes",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_boxes.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_building",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_building.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_building_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_building_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_building_3",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_building_3.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_building_4",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_building_4.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_building_5",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_building_5.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_building_6",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_building_6.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_building_7",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_building_7.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_building_8",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_building_8.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_building_9",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_building_9.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_buses",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_buses.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_cars",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_cars.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_emergency_vehicles",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_emergency_vehicles.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_main_hero_trucks",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_main_hero_trucks.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_other",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_other.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_pickups",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_pickups.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_3",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_3.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_crossroads",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_crossroads.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_crossroads_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_crossroads_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_crossroads_3",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_crossroads_3.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_crossroads_4",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_crossroads_4.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_crosswalk",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_crosswalk.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_manhole",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_manhole.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_manhole_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_manhole_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_railroad",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_railroad.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_railroad_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_railroad_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_roadworks",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_roadworks.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_signs",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_signs.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_stopline",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_stopline.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_road_stopline_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_road_stopline_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_trams",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_trams.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "city_trucks",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/city_trucks.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "lowpoly_bench",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/lowpoly_bench.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_bag",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_bag.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_basket",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_basket.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_bench",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_bench.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_big_fence_iron",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_big_fence_iron.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_big_fence_wood",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_big_fence_wood.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_big_fence_wood_light",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_big_fence_wood_light.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_book_cover",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_book_cover.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_book_paper",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_book_paper.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_bottle_1",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_bottle_1.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_bottle_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_bottle_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_bottle_3",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_bottle_3.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_bottle_3_cover",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_bottle_3_cover.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_bowl",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_bowl.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_cage",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_cage.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_candle",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_candle.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_candle_metal",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_candle_metal.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_cauldron_metal_1",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_cauldron_metal_1.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_cauldron_metal_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_cauldron_metal_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_chair_metal",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_chair_metal.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_chair_wood",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_chair_wood.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_cow_bone",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_cow_bone.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_fences",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_fences.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_firewood",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_firewood.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_firewood_light",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_firewood_light.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_frying_pan",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_frying_pan.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_pile_of_planks",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_pile_of_planks.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_rack_foe_weapons",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_rack_foe_weapons.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_skull",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_skull.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_sqwing_wood",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_sqwing_wood.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_sqwing_wood_trunck",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_sqwing_wood_trunck.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_sqwing_wood_trunck_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_sqwing_wood_trunck_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_torch_1",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_torch_1.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_torch_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_torch_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_vase",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_vase.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_wagon_metal",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_wagon_metal.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_wagon_whells",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_wagon_whells.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_wagon_wood",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_wagon_wood.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_wooden_chest",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_wooden_chest.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "prop_wooden_chest_metal",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/prop_wooden_chest_metal.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "retro_lowpoly_toilet",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/retro_lowpoly_toilet.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_botanical_bookends",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_botanical_bookends.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_compact_lavatory",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_compact_lavatory.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_contemporary_carpet",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_contemporary_carpet.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_don_tripp_light_fixture",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_don_tripp_light_fixture.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_just_alittle_peek",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_just_alittle_peek.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_lamp_without_storage",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_lamp_without_storage.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_lovely_armchair",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_lovely_armchair.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_lovely_dining_chair",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_lovely_dining_chair.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_lovely_loveseat",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_lovely_loveseat.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_media_marathoner",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_media_marathoner.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_media_marathoner_allonthe_wall",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_media_marathoner_allonthe_wall.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_miracle_mirror",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_miracle_mirror.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_modern_pouffe",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_modern_pouffe.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_murphy_bed",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_murphy_bed.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_murphy_love_seat",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_murphy_love_seat.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_my_kinda_zen",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_my_kinda_zen.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_not_atable_end",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_not_atable_end.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_not_quite_orbital_sitting",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_not_quite_orbital_sitting.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_open_shelf",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_open_shelf.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_orbital_high_dining",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_orbital_high_dining.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_power_tower_bookcase",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_power_tower_bookcase.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_power_tower_dresser",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_power_tower_dresser.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_simpleand_clean_art",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_simpleand_clean_art.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_sir_cumference_coffee_table",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_sir_cumference_coffee_table.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_space_saving_single",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_space_saving_single.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_stubby_cubby_dresser",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_stubby_cubby_dresser.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_the_modern_desk_lamp",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_the_modern_desk_lamp.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_the_sinkz_bathroom_vanity",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_the_sinkz_bathroom_vanity.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_tiered_shelf",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_tiered_shelf.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_tiny_console",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_tiny_console.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_tiny_desk_for_tiny_living",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_tiny_desk_for_tiny_living.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "tiny_vertical_mini_garden",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/tiny_vertical_mini_garden.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "bench_bench1_bench1",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/bench_bench1_bench1.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "toilet_object",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/toilet_object.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
     }
   ]
 }

@@ -321,6 +321,21 @@ const server = createServer(async (req, res) => {
 
 setInterval(sweepRateLimit, 5 * 60 * 1000).unref();
 
+server.on('error', (err) => {
+  // Node's default for a listen failure is an unhandled 'error' event and a
+  // stack trace, which says nothing useful about what to actually do.
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[server] port ${PORT} is already in use — is another copy running?`);
+    console.error('[server] stop it, or start this one with a different PORT.');
+  } else if (err.code === 'EACCES') {
+    console.error(`[server] not allowed to bind port ${PORT}. Ports below 1024 need root;`);
+    console.error('[server] run on a high port and reverse-proxy to it instead.');
+  } else {
+    console.error('[server]', err);
+  }
+  process.exit(1);
+});
+
 server.listen(PORT, HOST, () => {
   console.log(`[server] JumpGame on http://${HOST}:${PORT}`);
   console.log(`[server] serving ${DIST}`);

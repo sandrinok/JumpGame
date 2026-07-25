@@ -85,6 +85,23 @@ async function main() {
     });
   }
 
+  // One credit per work, not per file. Splitting a pack with split-pack.mjs
+  // produces dozens of models that all carry the same attribution; the licence
+  // is satisfied by naming the work once, and listing it 39 times would bury
+  // every other creator.
+  const seen = new Map();
+  for (const e of entries) {
+    // Title as well as source: two different works can share a source URL —
+    // both Quaternius packs point at quaternius.com — and keying on the URL
+    // alone silently drops one of them.
+    const key = `${e.source}|${e.title}|${e.author}`;
+    if (!seen.has(key)) seen.set(key, e);
+  }
+  const unique = [...seen.values()];
+  const collapsed = entries.length - unique.length;
+  entries.length = 0;
+  entries.push(...unique);
+
   entries.sort((a, b) => a.title.localeCompare(b.title) || a.author.localeCompare(b.author));
   await writeFile(OUT, JSON.stringify({ entries }, null, 2) + '\n');
 
@@ -97,7 +114,8 @@ async function main() {
       Object.entries(byLicense)
         .map(([l, n]) => `${l}: ${n}`)
         .join(', ') +
-      ')',
+      ')' +
+      (collapsed > 0 ? `, ${collapsed} duplicate file credit(s) collapsed` : ''),
   );
 
   if (missing.length > 0) {

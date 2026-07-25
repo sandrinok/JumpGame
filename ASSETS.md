@@ -1,13 +1,55 @@
 # Adding models
 
-## The workflow
+## Single models
 
-1. Drop the `.glb` / `.gltf` (and its textures) anywhere under `3dassets/`.
+1. Drop the `.glb` / `.gltf` (and its textures) anywhere under `3dassets/`,
+   except in `packs/` or `character/`.
 2. `npm run optimize-assets`
 3. It writes an optimized `.glb` to `public/assets/3d/` and appends an entry to
    `public/assets/manifest.json`. Existing entries are never touched, so re-runs
    are safe.
 4. The asset shows up in the editor palette. Drag it into the world.
+
+## Asset packs
+
+A pack is one `.glb` holding dozens of props side by side. Optimized as-is it
+becomes a single asset, so placing it drops the entire pack into the level as
+one object. Put packs in `3dassets/packs/` — which `optimize-assets` skips —
+and split them first:
+
+```sh
+# See what it would produce before writing anything
+node scripts/split-pack.mjs "3dassets/packs/mypack.glb" --dry --prefix tiny
+
+# Write the individual props to 3dassets/, then optimize as usual
+node scripts/split-pack.mjs "3dassets/packs/mypack.glb" --prefix tiny --auto-scale 1.5
+npm run optimize-assets
+```
+
+Each prop is detached with its in-pack transform baked in, recentred on X/Z,
+and stood on y=0 so it lands on the surface you drop it on. The pack's
+author and licence travel with every piece, so credits still work.
+
+Two flags matter:
+
+- **`--depth`** (default 1) — how many levels below the wrapper nodes the props
+  live. A pack of loose props is depth 1; one organised into folders
+  (`Buildings`, `Vehicles`, `Props`) is depth 2. This is not auto-detected,
+  because a named group wrapping one mesh and a folder wrapping nine of them
+  are structurally identical. Use `--dry` and look at the names.
+- **`--auto-scale <units>`** — packs arrive in whatever unit their author used;
+  one here had benches 134 units long, another buildings 0.2 units tall, and
+  the player is about 2 units. This derives a single factor from the median
+  prop so the pack lands at a sane size *without* flattening the size
+  differences inside it. Rough targets: small props 2, furniture 1.5,
+  buildings 6, terrain chunks 8.
+
+Also useful: `--only <regex>` to extract one category, and `--min-size <units>`
+to drop degenerate fragments.
+
+A pack with meaningless object names (`Cube.014`, `Object_23`) is a poor
+candidate — you get dozens of palette entries nobody can identify. Check with
+`--dry` first.
 
 Nothing under `3dassets/` is committed — only the optimized output is. Keep the
 raw downloads, though: they are the only way to re-run the pipeline with
