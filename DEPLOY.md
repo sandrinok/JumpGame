@@ -45,6 +45,7 @@ PORT=8080
 HOST=127.0.0.1                        # localhost only when nginx sits in front
 TRUST_PROXY=1                         # see below
 LEVELS_DIR=/var/lib/jumpgame/levels   # see below
+SCORES_FILE=/var/lib/jumpgame/scores.json   # see below
 ```
 
 ### TRUST_PROXY
@@ -66,6 +67,25 @@ the editor. The server warns about this at startup.
 
 Reads fall back to the copy inside `dist/` until the first save, so a fresh
 install serves the level shipped with the build without any manual copying.
+
+### SCORES_FILE
+
+Where the shared high score table is written. Defaults to `data/scores.json`
+relative to the working directory — outside `dist/` on purpose, since a
+leaderboard that forgets everyone's runs on each deploy is worse than none.
+Put it on the same persistent volume as `LEVELS_DIR`.
+
+The process needs write access to the containing directory: the file is written
+as `scores.json.tmp` and renamed, so a crash mid-write cannot leave a truncated
+table behind.
+
+There is no authentication on score submission, and no way to add one that
+would be worth the effort. The height is a number the browser posts, so anyone
+who opens the developer console can post any number they like. Validation stops
+`Infinity` and negatives from wedging the board, and a rate limit stops it being
+flooded; beyond that the leaderboard is exactly as honest as the people playing.
+If it ever needs to be more than that, the fix is simulating runs server-side,
+which costs more than the rest of the game.
 
 ## systemd
 
@@ -182,4 +202,6 @@ investigate.
 | Login accepted but editor never opens | Site not on HTTPS, so the `Secure` cookie is dropped |
 | "Too many attempts" and you're locked out | Rate limiter; it's in memory, so `systemctl restart jumpgame` clears it |
 | Saved levels vanish after deploy | `LEVELS_DIR` still points inside `dist/` |
+| High scores vanish after deploy | `SCORES_FILE` points inside `dist/`, or at a path that is not persisted |
+| High scores never appear | The server cannot write `SCORES_FILE`'s directory — check the startup log and permissions |
 | One wrong password locks out everyone | `TRUST_PROXY` not set while behind nginx |

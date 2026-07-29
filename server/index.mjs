@@ -10,6 +10,8 @@
  *   POST   /api/session          { password } -> sets the session cookie
  *   DELETE /api/session          log out
  *   PUT    /api/level/<name>.json  save a level (requires session)
+ *   GET    /api/scores           the shared high score table
+ *   POST   /api/scores           { name, height } -> record a run
  *
  * Everything else is served from dist/, falling back to index.html.
  *
@@ -37,6 +39,7 @@ import {
   sweepRateLimit,
   verifyPassword,
 } from './auth.mjs';
+import { cleanHeight, cleanName, createScoreBoard } from './scores.mjs';
 
 // process.loadEnvFile() needs Node >= 20.12. On an older runtime it would throw
 // and the catch below would swallow it, leaving the editor mysteriously
@@ -62,9 +65,20 @@ const HOST = process.env.HOST ?? '0.0.0.0';
 const DIST = resolve(process.env.DIST_DIR ?? 'dist');
 const LEVELS = resolve(process.env.LEVELS_DIR ?? join(DIST, 'levels'));
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+/**
+ * Where the shared score table lives.
+ *
+ * Defaults outside dist/ on purpose. Levels default to a path inside the build
+ * and warn about it; scores would lose everyone's runs on the next deploy, and
+ * a leaderboard that forgets is worse than none.
+ */
+const SCORES_FILE = resolve(process.env.SCORES_FILE ?? join('data', 'scores.json'));
 
 const MAX_LEVEL_BYTES = 5 * 1024 * 1024;
+const MAX_SCORE_BYTES = 1024;
 const LEVEL_NAME = /^[a-zA-Z0-9_-]{1,64}\.json$/;
+
+const scores = createScoreBoard(SCORES_FILE);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -212,6 +226,55 @@ async function handleLevelSave(req, res, name) {
 }
 
 /**
+ * The high score table. Readable by anyone, writable by anyone.
+ *
+ * There is no authentication here and there is no point pretending otherwise:
+ * the height is a number the client posts, so it is only as trustworthy as the
+ * people playing. Among colleagues on a Friday that is trustworthy enough, and
+ * the alternative — simulating each run on the server — would cost more than
+ * the whole game.
+ */
+async function handleScores(req, res, method) {
+  if (method === 'GET') {
+    sendJson(res, 200, { scores: await scores.top() });
+    return;
+  }
+  if (method !== 'POST') {
+    sendJson(res, 405, { error: 'method not allowed' });
+    return;
+  }
+
+  if (!scores.allow(clientIp(req))) {
+    sendJson(res, 429, { error: 'too many submissions' }, { 'retry-after': '60' });
+    return;
+  }
+
+  let body;
+  try {
+    body = JSON.parse(await readBody(req, MAX_SCORE_BYTES));
+  } catch {
+    sendJson(res, 400, { error: 'bad request' });
+    return;
+  }
+
+  const name = cleanName(body?.name);
+  const height = cleanHeight(body?.height);
+  if (!name || height === null) {
+    sendJson(res, 400, { error: 'need a name and a height' });
+    return;
+  }
+
+  try {
+    const { improved, entries } = await scores.submit({ name, height });
+    if (improved) console.log(`[scores] ${name} — ${height.toFixed(1)}m`);
+    sendJson(res, 200, { ok: true, improved, scores: entries });
+  } catch (e) {
+    console.error('[scores] save failed:', e);
+    sendJson(res, 500, { error: 'save failed' });
+  }
+}
+
+/**
  * Serve a level from LEVELS_DIR, falling back to the copy inside the build.
  *
  * These two are only the same directory by default. Once LEVELS_DIR points
@@ -291,6 +354,10 @@ const server = createServer(async (req, res) => {
       await handleSession(req, res, req.method);
       return;
     }
+    if (pathname === '/api/scores') {
+      await handleScores(req, res, req.method);
+      return;
+    }
     if (pathname.startsWith('/api/level/')) {
       if (req.method !== 'PUT') {
         sendJson(res, 405, { error: 'method not allowed' });
@@ -319,7 +386,10 @@ const server = createServer(async (req, res) => {
   }
 });
 
-setInterval(sweepRateLimit, 5 * 60 * 1000).unref();
+setInterval(() => {
+  sweepRateLimit();
+  scores.sweep();
+}, 5 * 60 * 1000).unref();
 
 server.on('error', (err) => {
   // Node's default for a listen failure is an unhandled 'error' event and a
@@ -340,6 +410,7 @@ server.listen(PORT, HOST, () => {
   console.log(`[server] JumpGame on http://${HOST}:${PORT}`);
   console.log(`[server] serving ${DIST}`);
   console.log(`[server] levels   ${LEVELS}`);
+  console.log(`[server] scores   ${SCORES_FILE}`);
   if (!isConfigured()) {
     console.warn('[server] editor DISABLED: run `npm run set-editor-password` and restart.');
   }
@@ -350,6 +421,12 @@ server.listen(PORT, HOST, () => {
     console.warn(
       '[server] LEVELS_DIR is inside the build directory. Levels saved from the editor\n' +
         '[server] will be destroyed by the next deploy. Point LEVELS_DIR somewhere persistent.',
+    );
+  }
+  if (SCORES_FILE.startsWith(DIST)) {
+    console.warn(
+      '[server] SCORES_FILE is inside the build directory. Every deploy will wipe the\n' +
+        '[server] leaderboard. Point SCORES_FILE somewhere persistent.',
     );
   }
 });

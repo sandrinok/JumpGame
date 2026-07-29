@@ -18,6 +18,7 @@ import { AssetRegistry } from './world/registry';
 import { instantiate, loadLevel } from './world/level';
 import { createHud } from './ui/hud';
 import { loadScore, saveScore } from './persistence/score';
+import { submitScore, submitScoreBeacon } from './persistence/leaderboard';
 import { setLevelSource } from './persistence/levelFile';
 import { createStartScreen } from './ui/startScreen';
 import { createCreditsScreen } from './ui/creditsScreen';
@@ -193,21 +194,35 @@ window.addEventListener('resize', () => {
   postFx.setSize(container.clientWidth, container.clientHeight);
 });
 
-/** Persist the current run if it beat the record. Safe to call repeatedly. */
-function commitRun(): void {
+/**
+ * Persist the current run if it beat the record. Safe to call repeatedly.
+ *
+ * @param leaving true when the page is going away, which changes how the score
+ *                is sent — an ordinary fetch would be cancelled by the unload.
+ */
+function commitRun(leaving = false): void {
   if (runMaxHeight <= score.best) return;
   score.best = runMaxHeight;
   saveScore(score);
   hud.setBest(score.name, score.best);
+
+  // The shared board is decoration; a failure here must not disturb the run.
+  if (leaving) {
+    submitScoreBeacon(score.name, score.best);
+    return;
+  }
+  void submitScore(score.name, score.best).then((scores) => {
+    if (scores) startScreen.setScores(scores);
+  });
 }
 
 // A run used to be banked only by falling past killY, so climbing to 40m and
 // then closing the tab threw the whole thing away. pagehide covers closing and
 // navigating; visibilitychange covers switching tabs or apps, which on mobile
 // is often the last event a page gets.
-window.addEventListener('pagehide', commitRun);
+window.addEventListener('pagehide', () => commitRun(true));
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') commitRun();
+  if (document.visibilityState === 'hidden') commitRun(true);
 });
 
 installDevHandles({

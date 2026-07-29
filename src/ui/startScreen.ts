@@ -1,11 +1,15 @@
 import type { ScoreData } from '../persistence/score';
 import { saveScore } from '../persistence/score';
+import { createLeaderboard } from './leaderboard';
+import type { ScoreEntry } from '../persistence/leaderboard';
 
 export interface StartScreen {
   show(): void;
   hide(): void;
   onPlay: () => void;
   onCredits: () => void;
+  /** Draw a board the caller already has, e.g. one a submission returned. */
+  setScores(scores: ScoreEntry[]): void;
 }
 
 export function createStartScreen(parent: HTMLElement, score: ScoreData): StartScreen {
@@ -15,17 +19,32 @@ export function createStartScreen(parent: HTMLElement, score: ScoreData): StartS
     display: flex; align-items: center; justify-content: center;
     background: linear-gradient(180deg, rgba(8,12,20,0.85), rgba(8,12,20,0.95));
     color: #eee; font: 14px system-ui, sans-serif;
-    z-index: 100;
+    z-index: 100; overflow: auto;
   `;
+
+  // Side by side on a desktop, stacked on anything narrow. The board is the
+  // point of the screen as much as the Play button is, so it sits beside it
+  // rather than behind another click.
+  const layout = document.createElement('div');
+  layout.style.cssText = `
+    display: flex; flex-wrap: wrap; gap: 20px;
+    align-items: flex-start; justify-content: center;
+    padding: 24px; margin: auto;
+  `;
+  root.appendChild(layout);
 
   const card = document.createElement('div');
   card.style.cssText = `
-    min-width: 320px; padding: 28px 32px;
+    width: 320px; max-width: calc(100vw - 48px); box-sizing: border-box;
+    padding: 28px 32px;
     background: #181820; border: 1px solid #333; border-radius: 10px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.5);
     text-align: center;
   `;
-  root.appendChild(card);
+  layout.appendChild(card);
+
+  const leaderboard = createLeaderboard();
+  layout.appendChild(leaderboard.element);
 
   const title = document.createElement('div');
   title.textContent = 'JumpGame';
@@ -55,9 +74,12 @@ export function createStartScreen(parent: HTMLElement, score: ScoreData): StartS
   const bestEl = document.createElement('div');
   bestEl.style.cssText = 'opacity: 0.85; margin-bottom: 22px;';
   const renderBest = (): void => {
+    // "Your best", not "Best". This is the record on this browser; the board
+    // beside it is the one everybody shares, and labelling both the same way
+    // was how the local number came to read as the record.
     bestEl.textContent = score.best > 0
-      ? `Best: ${score.name} — ${score.best.toFixed(1)} m`
-      : 'No runs yet — make the first one count.';
+      ? `Your best: ${score.best.toFixed(1)} m`
+      : 'No runs yet.';
   };
   renderBest();
   card.appendChild(bestEl);
@@ -95,21 +117,32 @@ export function createStartScreen(parent: HTMLElement, score: ScoreData): StartS
   const api: StartScreen = {
     onPlay: () => undefined,
     onCredits: () => undefined,
+    setScores(scores) {
+      leaderboard.render(scores);
+    },
     show() {
       renderBest();
       nameInput.value = score.name;
+      leaderboard.setHighlight(score.name);
       root.style.display = 'flex';
+      // Fetched every time the screen appears, not once at startup: between one
+      // run and the next, the person on the laptop opposite has been playing too.
+      void leaderboard.refresh();
     },
     hide() {
       root.style.display = 'none';
     },
   };
 
+  leaderboard.setHighlight(score.name);
+  void leaderboard.refresh();
+
   const startRun = (): void => {
     const name = nameInput.value.trim() || 'Player';
     if (name !== score.name) {
       score.name = name;
       saveScore(score);
+      leaderboard.setHighlight(name);
     }
     api.hide();
     api.onPlay();

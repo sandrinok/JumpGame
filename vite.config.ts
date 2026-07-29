@@ -2,6 +2,10 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+// The real implementation, not a copy. Two servers answering the same endpoint
+// with subtly different rules is the kind of thing you only find out about in
+// production, when a name the dev server accepted is rejected on the night.
+import { cleanHeight, cleanName, createScoreBoard } from './server/scores.mjs';
 
 const LEVEL_NAME = /^[a-zA-Z0-9_-]{1,64}\.json$/;
 
@@ -16,6 +20,9 @@ const LEVEL_NAME = /^[a-zA-Z0-9_-]{1,64}\.json$/;
  */
 function levelSavePlugin(): Plugin {
   const levelsDir = resolve(process.cwd(), 'public', 'levels');
+  // A separate file from production's, so experimenting locally cannot put a
+  // joke entry on the board everyone else is looking at.
+  const scores = createScoreBoard(resolve(process.cwd(), 'data', 'scores.dev.json'));
   return {
     name: 'jumpgame-level-save',
     apply: 'serve',
@@ -24,6 +31,30 @@ function levelSavePlugin(): Plugin {
         res.statusCode = req.method === 'GET' ? 200 : 405;
         res.setHeader('content-type', 'application/json');
         res.end(JSON.stringify({ authenticated: true, configured: true, devMode: true }));
+      });
+
+      server.middlewares.use('/api/scores', async (req, res) => {
+        const send = (status: number, body: unknown): void => {
+          res.statusCode = status;
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify(body));
+        };
+        if (req.method === 'GET') return send(200, { scores: await scores.top() });
+        if (req.method !== 'POST') return send(405, { error: 'method not allowed' });
+
+        let raw = '';
+        for await (const chunk of req) raw += chunk;
+        let body: { name?: unknown; height?: unknown };
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          return send(400, { error: 'bad request' });
+        }
+        const name = cleanName(body?.name);
+        const height = cleanHeight(body?.height);
+        if (!name || height === null) return send(400, { error: 'need a name and a height' });
+        const { improved, entries } = await scores.submit({ name, height });
+        send(200, { ok: true, improved, scores: entries });
       });
 
       server.middlewares.use('/api/level', async (req, res) => {
