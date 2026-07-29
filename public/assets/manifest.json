@@ -1433,6 +1433,127 @@
       "tags": [
         "imported"
       ]
+    },
+    {
+      "id": "camper_ps1_spec",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/camper_ps1_spec.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "camper_with_1282_texture",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/camper_with_1282_texture.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "ddr2_memory_low_poly_psx",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/ddr2_memory_low_poly_psx.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "dirty_sink",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/dirty_sink.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "garden_gnome",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/garden_gnome.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "hdd_low_poly_psx",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/hdd_low_poly_psx.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "lowpoly_notebook",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/lowpoly_notebook.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "ps1_tree_bulbus",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/ps1_tree_bulbus.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_adrenaline_syringe",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_adrenaline_syringe.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "retro_lowpoly_toilet_paper",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/retro_lowpoly_toilet_paper.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "s3_trio64v2dx_low_poly_psx",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/s3_trio64v2dx_low_poly_psx.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
     }
   ]
 }
