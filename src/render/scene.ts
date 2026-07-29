@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
+import type { QualitySettings } from './quality';
 
 /** Half-size of the sun's shadow frustum, in world units, around the focus point. */
 const SHADOW_EXTENT = 22;
-const SHADOW_MAP_SIZE = 2048;
 
 /**
  * Direction the sunlight comes from. The sky shader and the shadow-casting
@@ -35,7 +35,10 @@ export interface SceneSetup {
   updateSky(dt: number): void;
 }
 
-export function createScene(renderer: THREE.WebGLRenderer): SceneSetup {
+export function createScene(
+  renderer: THREE.WebGLRenderer,
+  quality: QualitySettings,
+): SceneSetup {
   const scene = new THREE.Scene();
 
   const sky = new Sky();
@@ -83,7 +86,7 @@ export function createScene(renderer: THREE.WebGLRenderer): SceneSetup {
   const sun = new THREE.DirectionalLight(0xfff4e0, 3.2);
   sun.position.copy(SUN_OFFSET);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+  sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
   const cam = sun.shadow.camera;
   cam.left = -SHADOW_EXTENT;
   cam.right = SHADOW_EXTENT;

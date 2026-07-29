@@ -1,8 +1,17 @@
 import * as THREE from 'three';
+import type { QualitySettings } from './quality';
 
-export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+export function createRenderer(container: HTMLElement, quality: QualitySettings): THREE.WebGLRenderer {
+  const renderer = new THREE.WebGLRenderer({
+    // Not a typo. Every pixel of scene geometry is drawn into the composer's
+    // own multisampled HDR target, and all the canvas ever receives is one
+    // fullscreen quad from the output pass. Antialiasing the canvas allocates a
+    // second multisampled framebuffer the size of the screen and resolves it
+    // every frame, to smooth the edges of a quad that has none.
+    antialias: false,
+    powerPreference: 'high-performance',
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.maxPixelRatio));
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true;

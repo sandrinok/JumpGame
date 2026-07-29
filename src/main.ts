@@ -1,6 +1,7 @@
 import { createCamera, createRenderer, handleResize } from './render/renderer';
 import { createGround, createScene, focusShadow } from './render/scene';
 import { createPostFx } from './render/postFx';
+import { detectTier, qualityFor } from './render/quality';
 import { FollowCamera } from './render/followCamera';
 import { startLoop } from './core/loop';
 import { Input } from './core/input';
@@ -22,6 +23,8 @@ import { createStartScreen } from './ui/startScreen';
 import { createCreditsScreen } from './ui/creditsScreen';
 import { playWindBurst, unlockAudio } from './audio/sfx';
 import { createDebugHud } from './ui/debugHud';
+import { createGpuTimer } from './render/gpuTimer';
+import { installDevHandles } from './render/bench';
 
 type EditorMode = 'play' | 'edit';
 
@@ -40,11 +43,15 @@ if (!appEl) throw new Error('#app not found');
 // loader below, which TypeScript otherwise widens back to HTMLElement | null.
 const container: HTMLElement = appEl;
 
-const renderer = createRenderer(container);
+// Settled once, before anything allocates a framebuffer: shadow map size and
+// multisampling are baked into GPU resources that are expensive to swap out.
+const quality = qualityFor(detectTier());
+
+const renderer = createRenderer(container, quality);
 const camera = createCamera(container);
-const { scene, sun, updateSky } = createScene(renderer);
+const { scene, sun, updateSky } = createScene(renderer, quality);
 createGround(scene);
-const postFx = createPostFx(renderer, scene, camera);
+const postFx = createPostFx(renderer, scene, camera, quality);
 
 const input = new Input(renderer.domElement);
 const followCam = new FollowCamera(camera);
@@ -81,7 +88,13 @@ let runMaxHeight = 0;
 let running = false;
 let currentMode: EditorMode = 'play';
 
-const debugHud = createDebugHud(container);
+const gpuTimer = createGpuTimer(renderer);
+const debugHud = createDebugHud(container, {
+  gpu: gpuTimer,
+  tier: quality.tier,
+  renderScale: () => postFx.renderScale,
+  bufferSize: () => postFx.bufferSize,
+});
 window.addEventListener('keydown', (e) => {
   if (e.code === 'F3') {
     debugHud.toggle();
@@ -197,6 +210,15 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') commitRun();
 });
 
+installDevHandles({
+  renderer,
+  scene,
+  postFx,
+  camera: () => editor?.activeCamera ?? camera,
+  level: levelHandle,
+  registry,
+});
+
 startLoop(
   // Simulation — fixed 60Hz. Gameplay decisions live here and nowhere else, so
   // they stay identical on every refresh rate.
@@ -224,6 +246,7 @@ startLoop(
 
   // Presentation — once per rendered frame, at whatever rate the display runs.
   (alpha, frameDt) => {
+    const cpuStart = debugHud.enabled ? performance.now() : 0;
     if (currentMode === 'play') {
       if (running) {
         renderPlayer(player, alpha, frameDt);
@@ -246,12 +269,19 @@ startLoop(
     input.endFrame();
 
     updateSky(frameDt);
+    // Resolution follows the frame budget. Fed the real frame interval, not the
+    // fixed step, since dropped frames are exactly what it looks for.
+    postFx.tune(frameDt * 1000);
     // renderer.info resets on every draw call, and the composer issues several
     // per frame — so sampling after it reported only the final fullscreen
     // quad ("draws 1 · tris 1"). Reset once per frame instead and let the
     // counters accumulate across every pass, which is the real cost anyway.
     renderer.info.reset();
+    // Timer queries only run while the overlay is up; asking the driver for
+    // timings every frame is not free, and nothing reads them when it is down.
+    if (debugHud.enabled) gpuTimer.begin();
     postFx.render(editor?.activeCamera ?? camera);
-    debugHud.sample(renderer);
+    if (debugHud.enabled) gpuTimer.end();
+    debugHud.sample(renderer, performance.now() - cpuStart);
   },
 );
