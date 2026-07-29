@@ -9,6 +9,28 @@
       "source": "https://sketchfab.com/3d-models/cake-with-cherry-353d9e6667a042b5b086302f1309ce8a"
     },
     {
+      "title": "Camper ps1 spec",
+      "author": "Arrangemonk",
+      "authorUrl": "https://sketchfab.com/Arrangemonk9000",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/camper-ps1-spec-bf44c46b2d024819bfe6f289cb1b14a4",
+      "files": [
+        "camper_ps1_spec.glb"
+      ]
+    },
+    {
+      "title": "Camper with 128² texture",
+      "author": "Arrangemonk",
+      "authorUrl": "https://sketchfab.com/Arrangemonk9000",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/camper-with-1282-texture-f7e84c1f96e647f68ead3ca2ecf5c43a",
+      "files": [
+        "camper_with_1282_texture.glb"
+      ]
+    },
+    {
       "title": "concrete road barrier photoscanned",
       "author": "widthRider",
       "authorUrl": "https://sketchfab.com/widthRider",
@@ -33,12 +55,45 @@
       "source": "https://sketchfab.com/3d-models/crane-0adf3e501a2a4155a25466112d29c6eb"
     },
     {
+      "title": "DDR2 memory low poly psx",
+      "author": "DinixLowPoly",
+      "authorUrl": "https://sketchfab.com/DinixGlasses",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/ddr2-memory-low-poly-psx-7f9445fe91724318b985aad275e5fb31",
+      "files": [
+        "ddr2_memory_low_poly_psx.glb"
+      ]
+    },
+    {
+      "title": "dirty Sink",
+      "author": "Arrangemonk",
+      "authorUrl": "https://sketchfab.com/Arrangemonk9000",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/dirty-sink-4ef085d237bf40bebeb6d3bd5080c943",
+      "files": [
+        "dirty_sink.glb"
+      ]
+    },
+    {
       "title": "Electricbox003 - Street Kitbash Collection",
       "author": "experiment_studio",
       "authorUrl": "https://sketchfab.com/experiment_studio",
       "license": "CC-BY-4.0",
       "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
       "source": "https://sketchfab.com/3d-models/electricbox003-street-kitbash-collection-e7c709ab760d4f1d9e2f167802cb59c0"
+    },
+    {
+      "title": "Emergency Power Station (PS1)",
+      "author": "S1lMoon",
+      "authorUrl": "https://sketchfab.com/s1lmoon",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/emergency-power-station-ps1-389f5331f49744dfa82a45fabb75d740",
+      "files": [
+        "emergency_power_station_ps1.glb"
+      ]
     },
     {
       "title": "Fortnite - Pizza Planet Delivery Truck",
@@ -65,12 +120,45 @@
       "source": "https://sketchfab.com/3d-models/free-low-poly-simple-urban-city-3d-asset-pack-310c806355814c3794f5e3022b38db85"
     },
     {
+      "title": "Garden Gnome",
+      "author": "Arrangemonk",
+      "authorUrl": "https://sketchfab.com/Arrangemonk9000",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/garden-gnome-49d2473cbab64bc2b334fa8dc42aa181",
+      "files": [
+        "garden_gnome.glb"
+      ]
+    },
+    {
+      "title": "hdd low poly psx",
+      "author": "DinixLowPoly",
+      "authorUrl": "https://sketchfab.com/DinixGlasses",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/hdd-low-poly-psx-459912a583e44bb3b76362dcec52a7c4",
+      "files": [
+        "hdd_low_poly_psx.glb"
+      ]
+    },
+    {
       "title": "Japanese street lamp",
       "author": "Dmitriy Baturinets",
       "authorUrl": "https://sketchfab.com/Baturinets",
       "license": "CC-BY-4.0",
       "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
       "source": "https://sketchfab.com/3d-models/japanese-street-lamp-de9e13e35b504fea84b51857adb2e8b0"
+    },
+    {
+      "title": "Low Poly Pizza",
+      "author": "Sleepless",
+      "authorUrl": "https://sketchfab.com/spatka",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/low-poly-pizza-d8ab867392b44e309aa4133e9ff780c9",
+      "files": [
+        "low_poly_pizza.glb"
+      ]
     },
     {
       "title": "Low-Poly Telephone Booth | Game Asset",
@@ -89,6 +177,39 @@
       "source": "https://sketchfab.com/3d-models/lowpoly-bench-79d4fca3caba499c9870d5056ecdee6c"
     },
     {
+      "title": "lowpoly notebook",
+      "author": "Arrangemonk",
+      "authorUrl": "https://sketchfab.com/Arrangemonk9000",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/lowpoly-notebook-fbb7a3d0a981473abf934415f5b91cfa",
+      "files": [
+        "lowpoly_notebook.glb"
+      ]
+    },
+    {
+      "title": "LowPoly shawarma skewer PSX -- سيخ شاورما",
+      "author": "H",
+      "authorUrl": "https://sketchfab.com/Heereezz",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/lowpoly-shawarma-skewer-psx-9a68597ab8b2451eb6d086e1f7d7d359",
+      "files": [
+        "lowpoly_shawarma_skewer_psx.glb"
+      ]
+    },
+    {
+      "title": "MOAI | Low Poly | Game-Ready",
+      "author": "lynnthefigs",
+      "authorUrl": "https://sketchfab.com/lynnthefigs",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/moai-low-poly-game-ready-e8821b6b54504268bd0ba2927fef9377",
+      "files": [
+        "moai_low_poly_game_ready.glb"
+      ]
+    },
+    {
       "title": "Origami Crane",
       "author": "gaoran0623",
       "authorUrl": "https://sketchfab.com/gaoran0623",
@@ -97,12 +218,155 @@
       "source": "https://sketchfab.com/3d-models/origami-crane-d97d46a86470442ab5b8d64bace35b5b"
     },
     {
+      "title": "PS1 Retro Concrete Mixer (PS1)",
+      "author": "S1lMoon",
+      "authorUrl": "https://sketchfab.com/s1lmoon",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/ps1-retro-concrete-mixer-ps1-9279ddc0fedc44a3a910ef75e339b773",
+      "files": [
+        "ps1_retro_concrete_mixer.glb"
+      ]
+    },
+    {
+      "title": "ps1_tree_bulbus",
+      "author": "Arrangemonk",
+      "authorUrl": "https://sketchfab.com/Arrangemonk9000",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/ps1-tree-bulbus-f7e871f7b2484b88a26d1f97d34add5f",
+      "files": [
+        "ps1_tree_bulbus.glb"
+      ]
+    },
+    {
+      "title": "PS1/Lowpoly Gravestone",
+      "author": "dro",
+      "authorUrl": "https://sketchfab.com/drolavellan",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/ps1lowpoly-gravestone-acab7d41a2254cf9bde83bdff2f74890",
+      "files": [
+        "ps1lowpoly_gravestone.glb"
+      ]
+    },
+    {
+      "title": "PSX Adrenaline Syringe",
+      "author": "ZwiebelGames",
+      "authorUrl": "https://sketchfab.com/ZwiebelGames",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/psx-adrenaline-syringe-97547a325dfc499cb3ffbb8abaa17c2a",
+      "files": [
+        "psx_adrenaline_syringe.glb"
+      ]
+    },
+    {
+      "title": "PSX Birch Tree",
+      "author": "Arimantos",
+      "authorUrl": "https://sketchfab.com/Arimantos",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/psx-birch-tree-029c523a48054e05b95f1fbd9e987226",
+      "files": [
+        "psx_birch_tree.glb"
+      ]
+    },
+    {
+      "title": "PSX Industrial Pack",
+      "author": "Tomitos",
+      "authorUrl": "https://sketchfab.com/Tomitos_",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/psx-industrial-pack-12cb749961974f94a4063e67dafb2d76",
+      "files": [
+        "psx_industrial_pack_*"
+      ]
+    },
+    {
+      "title": "PSX Low-poly Acoustic Guitar",
+      "author": "korkskrew2000",
+      "authorUrl": "https://sketchfab.com/korkskrew2000",
+      "license": "CC-BY-SA-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/4.0/",
+      "source": "https://sketchfab.com/3d-models/psx-low-poly-acoustic-guitar-cbfcf5f9f23645daa8bdc34ff6b84026",
+      "files": [
+        "psx_low_poly_acoustic_guitar.glb"
+      ]
+    },
+    {
+      "title": "PSX Low-poly Shopping Cart",
+      "author": "korkskrew2000",
+      "authorUrl": "https://sketchfab.com/korkskrew2000",
+      "license": "CC-BY-SA-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/4.0/",
+      "source": "https://sketchfab.com/3d-models/psx-low-poly-shopping-cart-d64b194a1f2c4715b334bde8d3b267ca",
+      "files": [
+        "psx_low_poly_shopping_cart.glb"
+      ]
+    },
+    {
+      "title": "PSX prop - Old Garage",
+      "author": "Wardster",
+      "authorUrl": "https://sketchfab.com/WardsterSAW",
+      "license": "SKETCHFAB Standard",
+      "licenseUrl": "https://sketchfab.com/licenses",
+      "source": "https://sketchfab.com/3d-models/psx-prop-old-garage-192c06f284b5454f83ab081ef23f6567",
+      "files": [
+        "psx_prop_old_garage.glb"
+      ]
+    },
+    {
+      "title": "PSX Retro Computer",
+      "author": "Tomitos",
+      "authorUrl": "https://sketchfab.com/Tomitos_",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/psx-retro-computer-7e7f8a9dfa1f4b34abde94bb02b9f46c",
+      "files": [
+        "psx_retro_computer.glb"
+      ]
+    },
+    {
+      "title": "Psx style pizza and coke",
+      "author": "some random artist",
+      "authorUrl": "https://sketchfab.com/ichi39",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/psx-style-pizza-and-coke-de3e8f3e203446628405bd130d381721",
+      "files": [
+        "psx_style_pizza_and_coke.glb"
+      ]
+    },
+    {
+      "title": "PSX Style Trees",
+      "author": "wooolvie",
+      "authorUrl": "https://sketchfab.com/wooolvie",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/psx-style-trees-c73818d0c15b49b49b5aacf685361c46",
+      "files": [
+        "psx_style_trees.glb"
+      ]
+    },
+    {
       "title": "Retro Lowpoly Toilet (PS1/PS2 style)",
       "author": "lonesomeducky",
       "authorUrl": "https://sketchfab.com/lonesomeducky",
       "license": "SKETCHFAB Standard",
       "licenseUrl": "https://sketchfab.com/licenses",
       "source": "https://sketchfab.com/3d-models/retro-lowpoly-toilet-ps1ps2-style-56f6aac4e02f4c76835b8564bc983eb0"
+    },
+    {
+      "title": "Retro Lowpoly Toilet Paper",
+      "author": "lonesomeducky",
+      "authorUrl": "https://sketchfab.com/lonesomeducky",
+      "license": "SKETCHFAB Standard",
+      "licenseUrl": "https://sketchfab.com/licenses",
+      "source": "https://sketchfab.com/3d-models/retro-lowpoly-toilet-paper-c07d8e85f06444d3a7cd20b1d65d5316",
+      "files": [
+        "retro_lowpoly_toilet_paper.glb"
+      ]
     },
     {
       "title": "Road Cone",
@@ -137,6 +401,17 @@
       "source": "https://sketchfab.com/3d-models/rubber-duck-09beba2fa834415f89734b21376fd886"
     },
     {
+      "title": "S3 Trio64V2/DX Low poly psx",
+      "author": "DinixLowPoly",
+      "authorUrl": "https://sketchfab.com/DinixGlasses",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/s3-trio64v2dx-low-poly-psx-8b167ead5c3f4fd1b836597ad8655505",
+      "files": [
+        "s3_trio64v2dx_low_poly_psx.glb"
+      ]
+    },
+    {
       "title": "Shvan '92 Ambulance - Low Poly model",
       "author": "Daniel Zhabotinsky",
       "authorUrl": "https://sketchfab.com/DanielZhabotinsky",
@@ -153,6 +428,17 @@
       "source": "https://sketchfab.com/3d-models/simple-apocalypse-2-free-6113ac4f9fe74089bbcea36b0168d80f"
     },
     {
+      "title": "Stop Sign PSX",
+      "author": "dohnjoe",
+      "authorUrl": "https://sketchfab.com/raydevv",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/stop-sign-psx-4755443bd1884c5394e3eae1f8fb4019",
+      "files": [
+        "stop_sign_psx.glb"
+      ]
+    },
+    {
       "title": "sushi",
       "author": "Parrot",
       "authorUrl": "https://sketchfab.com/chitanda.wen",
@@ -167,6 +453,17 @@
       "license": "CC-BY-4.0",
       "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
       "source": "https://sketchfab.com/3d-models/tinylivingpack-e192841259554d1cabb08c7a8180be9f"
+    },
+    {
+      "title": "Trees and bush Pack LOWPOLY",
+      "author": "EFX",
+      "authorUrl": "https://sketchfab.com/evan4129",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
+      "source": "https://sketchfab.com/3d-models/trees-and-bush-pack-lowpoly-f2a25ee70df440c9ab03d57aba2dc3f2",
+      "files": [
+        "trees_and_bush_pack_*"
+      ]
     },
     {
       "title": "Universal Animation Library",
