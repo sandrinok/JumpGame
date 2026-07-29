@@ -94,7 +94,7 @@ export function createStartScreen(parent: HTMLElement, score: ScoreData): StartS
   card.appendChild(playBtn);
 
   const hint = document.createElement('div');
-  hint.textContent = 'Click the canvas after Play for mouse-look';
+  hint.textContent = 'Click the canvas for mouse-look · Esc to end the run';
   hint.style.cssText = 'margin-top: 20px; font-size: 12px; opacity: 0.5;';
   card.appendChild(hint);
 

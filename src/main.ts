@@ -89,6 +89,23 @@ let runMaxHeight = 0;
 let running = false;
 let currentMode: EditorMode = 'play';
 
+/**
+ * Distance from the capsule's centre — which is what the physics body reports —
+ * down to the soles of its feet. Heights are measured from there, so standing
+ * on the ground reads 0.0m rather than the 1.0m of capsule that is always
+ * underneath you.
+ */
+const FEET_OFFSET = character.halfHeight + character.radius;
+/**
+ * Whether the player has touched anything yet this run.
+ *
+ * The spawn hangs in the air, so the first thing that happens is a fall. Until
+ * this is set, that drop is not scored — otherwise every run opened with the
+ * spawn height already banked, and the whole board would be a row of people
+ * tied at exactly the height of the spawn point without any of them jumping.
+ */
+let hasLanded = false;
+
 const gpuTimer = createGpuTimer(renderer);
 const debugHud = createDebugHud(container, {
   gpu: gpuTimer,
@@ -185,8 +202,41 @@ startScreen.onPlay = () => {
   hud.setBest(score.name, score.best);
   respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
   runMaxHeight = 0;
+  hasLanded = false;
 };
 input.lockOnClick = false;
+
+/**
+ * End the run and go back to the menu.
+ *
+ * There was no way back at all: Play hid the start screen and nothing ever
+ * brought it up again, so the scoreboard was unreachable for as long as the tab
+ * stayed open. Ending the run here also banks it, which matters more than it
+ * sounds — a run was otherwise only ever submitted by falling past killY, and
+ * the ground collider is 200 units across with no hole in it, so in practice
+ * scores only reached the server when someone closed the tab.
+ */
+function leaveRun(): void {
+  if (!running || currentMode !== 'play') return;
+  commitRun();
+  runMaxHeight = 0;
+  hasLanded = false;
+  running = false;
+  input.lockOnClick = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+  startScreen.show();
+}
+
+// Escape is the obvious key, but while the pointer is locked the browser eats
+// it to release the lock and the page never sees the keypress. So the release
+// itself is the signal, and the key handler only covers playing without
+// mouse-look, where no lock was ever taken.
+document.addEventListener('pointerlockchange', () => {
+  if (!document.pointerLockElement) leaveRun();
+});
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Escape') leaveRun();
+});
 
 handleResize(renderer, camera, container);
 window.addEventListener('resize', () => {
@@ -244,13 +294,17 @@ startLoop(
 
       // Read height from the simulation, not the interpolated visual: a
       // respawn must trigger on where the player actually is.
-      const y = player.currPos.y;
-      hud.setHeight(y);
-      if (y > runMaxHeight) runMaxHeight = y;
+      const height = player.currPos.y - FEET_OFFSET;
+      hud.setHeight(height);
+      if (player.grounded) hasLanded = true;
+      if (hasLanded && height > runMaxHeight) runMaxHeight = height;
 
-      if (y < levelHandle.level.killY) {
+      // killY is a world coordinate, so it is compared against the body rather
+      // than the height shown to the player.
+      if (player.currPos.y < levelHandle.level.killY) {
         commitRun();
         runMaxHeight = 0;
+        hasLanded = false;
         respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
         hud.flashRespawn();
         playWindBurst();
