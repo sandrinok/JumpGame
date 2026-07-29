@@ -1,8 +1,22 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 export type CharacterState = 'idle' | 'walk' | 'run' | 'jump' | 'fall' | 'land';
+
+/**
+ * The loaded model and its clips, before anyone is wearing it.
+ *
+ * Separate from a rig because there may be several people in the world and they
+ * all use the same mesh and the same animations. Downloading and parsing that
+ * once and cloning per player is the difference between one 600KB fetch and one
+ * per person.
+ */
+export interface CharacterSource {
+  scene: THREE.Object3D;
+  clips: THREE.AnimationClip[];
+}
 
 export interface CharacterRig {
   root: THREE.Object3D;
@@ -14,17 +28,50 @@ export interface CharacterRig {
 const FADE = 0.18;
 const ONE_SHOT: ReadonlySet<CharacterState> = new Set(['jump', 'land']);
 
+/** In-flight or completed loads, keyed by the pair of URLs. */
+const sources = new Map<string, Promise<CharacterSource>>();
+
+/**
+ * Download the character once, however many times it is asked for.
+ *
+ * The promise is cached rather than the result, so several players joining at
+ * the same moment share a single request instead of racing each other into
+ * three copies of the same download.
+ */
+export function loadCharacterSource(url: string, animationsUrl?: string): Promise<CharacterSource> {
+  const key = `${url}|${animationsUrl ?? ''}`;
+  const existing = sources.get(key);
+  if (existing) return existing;
+
+  // Character assets are meshopt-compressed by scripts/optimize-character.mjs.
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+  const pending = Promise.all([
+    loader.loadAsync(url),
+    animationsUrl ? loader.loadAsync(animationsUrl) : Promise.resolve(null),
+  ]).then(([gltf, animsGltf]) => ({
+    scene: gltf.scene,
+    clips: [...gltf.animations, ...(animsGltf ? animsGltf.animations : [])],
+  }));
+  sources.set(key, pending);
+  // A failed load must not be cached, or every later attempt gets the same
+  // rejection without ever retrying.
+  pending.catch(() => sources.delete(key));
+  return pending;
+}
+
 export async function loadCharacterRig(
   url: string,
   animationsUrl?: string,
 ): Promise<CharacterRig> {
-  // Character assets are meshopt-compressed by scripts/optimize-character.mjs.
-  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-  const [gltf, animsGltf] = await Promise.all([
-    loader.loadAsync(url),
-    animationsUrl ? loader.loadAsync(animationsUrl) : Promise.resolve(null),
-  ]);
-  const root = gltf.scene;
+  return createCharacterRig(await loadCharacterSource(url, animationsUrl));
+}
+
+/** Build an independent, separately-animated copy of the character. */
+export function createCharacterRig(source: CharacterSource): CharacterRig {
+  // A plain Object3D.clone() shares the skeleton, so every copy would be posed
+  // by whichever mixer ran last — all of them moving as one. SkeletonUtils
+  // rebuilds the bone hierarchy and rebinds the skinned meshes to it.
+  const root = cloneSkeleton(source.scene);
   root.traverse((o) => {
     if ((o as THREE.Mesh).isMesh) {
       const m = o as THREE.Mesh;
@@ -34,9 +81,7 @@ export async function loadCharacterRig(
   });
   const mixer = new THREE.AnimationMixer(root);
   const byName: Record<string, THREE.AnimationClip> = {};
-  const allClips: THREE.AnimationClip[] = [...gltf.animations];
-  if (animsGltf) allClips.push(...animsGltf.animations);
-  for (const c of allClips) byName[c.name.toLowerCase()] = c;
+  for (const c of source.clips) byName[c.name.toLowerCase()] = c;
 
   const pick = (...names: string[]): THREE.AnimationClip | undefined => {
     for (const n of names) {

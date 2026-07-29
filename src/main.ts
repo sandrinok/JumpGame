@@ -19,6 +19,9 @@ import { instantiate, loadLevel } from './world/level';
 import { createHud } from './ui/hud';
 import { loadScore, saveScore } from './persistence/score';
 import { submitScore, submitScoreBeacon } from './persistence/leaderboard';
+import { connectMultiplayer } from './net/multiplayer';
+import { createRemotePlayers, type RemotePlayers } from './game/remotePlayers';
+import { createTinter, type Tinter } from './game/character/tint';
 import { setLevelSource } from './persistence/levelFile';
 import { createStartScreen } from './ui/startScreen';
 import { createCreditsScreen } from './ui/creditsScreen';
@@ -76,15 +79,28 @@ const character = createCharacter(physics, {
   z: levelHandle.level.spawn.pos[2],
 });
 const player = createPlayer(scene, character);
-attachCharacterRig(player, '/assets/character/player.glb', {
-  animationsUrl: '/assets/character/animations.glb',
-}).catch((e) => {
-  console.warn('Character rig failed to load, using debug capsule:', e);
-});
-
+const CHARACTER_MODEL = '/assets/character/player.glb';
+const CHARACTER_ANIMATIONS = '/assets/character/animations.glb';
 const hud = createHud(container);
 const score = loadScore();
 hud.setBest(score.name, score.best);
+
+/** Applies the local player's chosen colour to their own character. */
+let tintSelf: Tinter | null = null;
+attachCharacterRig(player, CHARACTER_MODEL, {
+  animationsUrl: CHARACTER_ANIMATIONS,
+})
+  .then(() => {
+    if (!player.rig) return;
+    // Seeing yourself in the colour everyone else sees you in. Without this the
+    // choice is invisible to the one person making it.
+    tintSelf = createTinter(player.rig.root);
+    tintSelf(score.colour);
+  })
+  .catch((e) => {
+    console.warn('Character rig failed to load, using debug capsule:', e);
+  });
+
 let runMaxHeight = 0;
 let running = false;
 let currentMode: EditorMode = 'play';
@@ -105,6 +121,26 @@ const FEET_OFFSET = character.halfHeight + character.radius;
  * tied at exactly the height of the spawn point without any of them jumping.
  */
 let hasLanded = false;
+
+/*
+ * The shared world.
+ *
+ * Everything about it is optional: the connection retries quietly in the
+ * background, remote avatars only appear once the character model has loaded,
+ * and nothing here can stop the game running on its own.
+ */
+const net = connectMultiplayer(score.name, score.colour);
+let remotePlayers: RemotePlayers | null = null;
+createRemotePlayers(
+  scene,
+  CHARACTER_MODEL,
+  CHARACTER_ANIMATIONS,
+  (character.halfHeight + character.radius) * 2,
+)
+  .then((rp) => {
+    remotePlayers = rp;
+  })
+  .catch((e) => console.warn('[multiplayer] remote avatars unavailable:', e));
 
 const gpuTimer = createGpuTimer(renderer);
 const debugHud = createDebugHud(container, {
@@ -195,6 +231,10 @@ window.addEventListener('keydown', (e) => {
 const creditsScreen = createCreditsScreen(container);
 const startScreen = createStartScreen(container, score);
 startScreen.onCredits = () => creditsScreen.open();
+startScreen.onIdentityChange = (name, colour) => {
+  net.setIdentity(name, colour);
+  tintSelf?.(colour);
+};
 startScreen.onPlay = () => {
   running = true;
   unlockAudio();
@@ -321,6 +361,17 @@ startLoop(
         renderPlayer(player, alpha, frameDt);
         followCam.update(input, player.visualRoot.position);
         focusShadow(sun, player.visualRoot.position);
+        // Reported from the interpolated visual rather than the simulation, so
+        // what other people see matches what this player sees of themselves.
+        net.send({
+          p: [
+            player.visualRoot.position.x,
+            player.visualRoot.position.y - FEET_OFFSET,
+            player.visualRoot.position.z,
+          ],
+          y: player.visualRoot.rotation.y,
+          a: player.rig?.current ?? 'idle',
+        });
       } else {
         // Keep the rig breathing behind the start screen. The mixer only ran
         // once a run had started, so the first thing a visitor saw was the
@@ -336,6 +387,11 @@ startLoop(
     // After the camera has consumed this frame's mouse delta, before the next
     // frame starts collecting one.
     input.endFrame();
+
+    // Other players keep moving whether or not this one is in a run, so they
+    // are still there behind the menu.
+    remotePlayers?.update(net.others);
+    remotePlayers?.render(frameDt);
 
     updateSky(frameDt);
     // Resolution follows the frame budget. Fed the real frame interval, not the

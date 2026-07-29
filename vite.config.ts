@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 // with subtly different rules is the kind of thing you only find out about in
 // production, when a name the dev server accepted is rejected on the night.
 import { cleanHeight, cleanName, createScoreBoard } from './server/scores.mjs';
+import { createRoom } from './server/multiplayer.mjs';
 
 const LEVEL_NAME = /^[a-zA-Z0-9_-]{1,64}\.json$/;
 
@@ -27,6 +28,15 @@ function levelSavePlugin(): Plugin {
     name: 'jumpgame-level-save',
     apply: 'serve',
     configureServer(server) {
+      // Vite runs its own WebSocket for hot reload on the same port, so this
+      // has to claim only /ws and leave every other upgrade alone — swallowing
+      // them would break HMR.
+      const room = createRoom();
+      server.httpServer?.on('upgrade', (req, socket) => {
+        const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+        if (url.pathname === '/ws') room.handleUpgrade(req, socket);
+      });
+
       server.middlewares.use('/api/session', (req, res) => {
         res.statusCode = req.method === 'GET' ? 200 : 405;
         res.setHeader('content-type', 'application/json');

@@ -68,6 +68,28 @@ the editor. The server warns about this at startup.
 Reads fall back to the copy inside `dist/` until the first save, so a fresh
 install serves the level shipped with the build without any manual copying.
 
+### The shared world needs a WebSocket through your proxy
+
+Players see each other over a WebSocket at `/ws`. nginx does not forward the
+upgrade handshake unless told to, and without it the game still runs — it just
+quietly stays single-player forever, which is a hard failure to notice because
+nothing errors.
+
+```nginx
+location /ws {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    # Idle players send nothing; the default 60s would disconnect them.
+    proxy_read_timeout 300s;
+}
+```
+
+The server pings every 15 seconds and drops a connection after 45 seconds of
+silence, so a proxy timeout shorter than that will cut people off mid-game.
+
 ### SCORES_FILE
 
 Where the shared high score table is written. Defaults to `data/scores.json`
@@ -204,4 +226,6 @@ investigate.
 | Saved levels vanish after deploy | `LEVELS_DIR` still points inside `dist/` |
 | High scores vanish after deploy | `SCORES_FILE` points inside `dist/`, or at a path that is not persisted |
 | High scores never appear | The server cannot write `SCORES_FILE`'s directory — check the startup log and permissions |
+| Nobody ever sees anyone else | The proxy is not forwarding the `/ws` upgrade — see above |
+| Players vanish after a minute | `proxy_read_timeout` is shorter than the 45s idle window |
 | One wrong password locks out everyone | `TRUST_PROXY` not set while behind nginx |

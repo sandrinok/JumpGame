@@ -8,6 +8,8 @@ export interface StartScreen {
   hide(): void;
   onPlay: () => void;
   onCredits: () => void;
+  /** Name or colour changed; the shared world needs telling. */
+  onIdentityChange: (name: string, colour: string) => void;
   /** Draw a board the caller already has, e.g. one a submission returned. */
   setScores(scores: ScoreEntry[]): void;
 }
@@ -71,6 +73,29 @@ export function createStartScreen(parent: HTMLElement, score: ScoreData): StartS
   nameRow.appendChild(nameInput);
   card.appendChild(nameRow);
 
+  // The whole of the customisation: a colour, which tints your character and
+  // your name plate for everyone else in the world.
+  const colourRow = document.createElement('div');
+  colourRow.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-bottom: 18px;';
+  const colourLabel = document.createElement('div');
+  colourLabel.textContent = 'Your colour';
+  colourLabel.style.cssText = 'opacity: 0.7;';
+  const colourInput = document.createElement('input');
+  colourInput.type = 'color';
+  colourInput.value = score.colour;
+  colourInput.style.cssText = `
+    width: 44px; height: 28px; padding: 0; cursor: pointer;
+    background: #0f0f14; border: 1px solid #444; border-radius: 4px;
+  `;
+  colourRow.append(colourLabel, colourInput);
+  card.appendChild(colourRow);
+
+  colourInput.addEventListener('input', () => {
+    score.colour = colourInput.value;
+    saveScore(score);
+    api.onIdentityChange(score.name, score.colour);
+  });
+
   const bestEl = document.createElement('div');
   bestEl.style.cssText = 'opacity: 0.85; margin-bottom: 22px;';
   const renderBest = (): void => {
@@ -117,12 +142,14 @@ export function createStartScreen(parent: HTMLElement, score: ScoreData): StartS
   const api: StartScreen = {
     onPlay: () => undefined,
     onCredits: () => undefined,
+    onIdentityChange: () => undefined,
     setScores(scores) {
       leaderboard.render(scores);
     },
     show() {
       renderBest();
       nameInput.value = score.name;
+      colourInput.value = score.colour;
       leaderboard.setHighlight(score.name);
       root.style.display = 'flex';
       // Fetched every time the screen appears, not once at startup: between one
@@ -143,6 +170,7 @@ export function createStartScreen(parent: HTMLElement, score: ScoreData): StartS
       score.name = name;
       saveScore(score);
       leaderboard.setHighlight(name);
+      api.onIdentityChange(score.name, score.colour);
     }
     api.hide();
     api.onPlay();

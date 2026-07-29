@@ -40,6 +40,7 @@ import {
   verifyPassword,
 } from './auth.mjs';
 import { cleanHeight, cleanName, createScoreBoard } from './scores.mjs';
+import { createRoom } from './multiplayer.mjs';
 
 // process.loadEnvFile() needs Node >= 20.12. On an older runtime it would throw
 // and the catch below would swallow it, leaving the editor mysteriously
@@ -79,6 +80,7 @@ const MAX_SCORE_BYTES = 1024;
 const LEVEL_NAME = /^[a-zA-Z0-9_-]{1,64}\.json$/;
 
 const scores = createScoreBoard(SCORES_FILE);
+const room = createRoom();
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -384,6 +386,18 @@ const server = createServer(async (req, res) => {
     if (!res.headersSent) res.writeHead(500);
     res.end('internal error');
   }
+});
+
+// The shared world runs over a WebSocket, which arrives as an HTTP upgrade
+// rather than an ordinary request, so it is handled off to the side of the
+// normal routing.
+server.on('upgrade', (req, socket) => {
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+  if (url.pathname !== '/ws') {
+    socket.end('HTTP/1.1 404 Not Found\r\n\r\n');
+    return;
+  }
+  room.handleUpgrade(req, socket);
 });
 
 setInterval(() => {
