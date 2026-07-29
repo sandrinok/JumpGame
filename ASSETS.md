@@ -62,9 +62,22 @@ different settings.
 
 ## What actually works in this game
 
-The pipeline caps textures at 2048px, converts them to WebP, and meshopt-
-compresses geometry, so a 40MB download usually lands around 1–2MB. That part
-is handled. What it cannot fix:
+The pipeline converts textures to WebP, meshopt-compresses geometry, merges
+parts that share a material into fewer draw calls, simplifies anything over
+25k triangles, and gives each asset a texture *memory* budget of 8MB rather
+than a flat resolution cap. So a prop with one map keeps a full 1024, two maps
+get 512 each, and a download arriving with thirty is pushed down until it fits.
+It also throws away textures that turn out to hold a single colour, which asset
+stores ship by the dozen — flat normal maps, solid-grey roughness maps — and
+folds them into the material factor instead.
+
+That budget is the number worth caring about. File size is about download
+time; what decides whether a level runs on a laptop is that the GPU expands
+every texture to uncompressed RGBA with mips, so one 1024 map costs 5.3MB of
+video memory however small the WebP was. `npm run audit-assets` prints the real
+figure per asset, worst first.
+
+What the pipeline cannot fix:
 
 **Collider shape matters more than polycount.** New assets default to
 `collider: trimesh` — exact, but the most expensive shape and the least

@@ -16,6 +16,7 @@
     "set-editor-password": "node scripts/set-editor-password.mjs",
     "typecheck": "tsc --noEmit",
     "optimize-assets": "node scripts/optimize-assets.mjs",
+    "audit-assets": "node scripts/audit-assets.mjs",
     "optimize-character": "node scripts/optimize-character.mjs",
     "build-credits": "node scripts/build-credits.mjs"
   },
