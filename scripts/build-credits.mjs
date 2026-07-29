@@ -304,6 +304,20 @@ const MANUAL = [
     files: ['psx_industrial_pack_*'],
   },
   {
+    // Read out of the original download's asset.extras, where Sketchfab put it.
+    // The 98 props were cut out of it in Blender, and a Blender export writes a
+    // fresh file with no extras block, so the credit had to be carried across
+    // by hand rather than travelling with the geometry as it does for packs
+    // split straight from their download.
+    title: 'Simple Apocalypse 2 [FREE]',
+    author: 'Leafia dev.',
+    authorUrl: 'https://sketchfab.com/Chano_old',
+    license: 'CC-BY-4.0',
+    licenseUrl: 'http://creativecommons.org/licenses/by/4.0/',
+    source: 'https://sketchfab.com/3d-models/simple-apocalypse-2-free-6113ac4f9fe74089bbcea36b0168d80f',
+    files: ['apoc_prop.glb', 'apoc_prop_*'],
+  },
+  {
     title: 'Trees and bush Pack LOWPOLY',
     author: 'EFX',
     authorUrl: 'https://sketchfab.com/evan4129',

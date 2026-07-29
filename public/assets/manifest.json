@@ -203,17 +203,6 @@
       ]
     },
     {
-      "id": "apoc_object",
-      "asset": {
-        "kind": "gltf",
-        "url": "/assets/3d/apoc_object.glb",
-        "collider": "trimesh"
-      },
-      "tags": [
-        "imported"
-      ]
-    },
-    {
       "id": "apoc_object_2",
       "asset": {
         "kind": "gltf",
@@ -2220,6 +2209,1084 @@
       "asset": {
         "kind": "gltf",
         "url": "/assets/3d/trees_and_bush_pack_tree_small.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_10",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_10.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_11",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_11.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_12",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_12.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_13",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_13.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_14",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_14.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_15",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_15.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_16",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_16.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_17",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_17.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_18",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_18.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_19",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_19.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_20",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_20.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_21",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_21.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_22",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_22.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_23",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_23.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_24",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_24.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_25",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_25.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_26",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_26.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_27",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_27.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_28",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_28.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_29",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_29.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_3",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_3.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_30",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_30.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_31",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_31.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_32",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_32.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_33",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_33.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_34",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_34.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_35",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_35.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_36",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_36.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_37",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_37.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_38",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_38.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_39",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_39.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_4",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_4.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_40",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_40.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_41",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_41.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_42",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_42.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_43",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_43.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_44",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_44.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_45",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_45.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_46",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_46.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_47",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_47.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_48",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_48.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_49",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_49.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_5",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_5.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_50",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_50.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_51",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_51.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_52",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_52.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_53",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_53.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_54",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_54.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_55",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_55.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_56",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_56.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_57",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_57.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_58",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_58.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_59",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_59.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_6",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_6.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_60",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_60.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_61",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_61.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_62",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_62.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_63",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_63.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_64",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_64.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_65",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_65.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_66",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_66.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_67",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_67.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_68",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_68.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_69",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_69.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_7",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_7.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_70",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_70.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_71",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_71.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_72",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_72.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_73",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_73.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_74",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_74.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_75",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_75.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_76",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_76.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_77",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_77.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_78",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_78.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_79",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_79.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_8",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_8.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_80",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_80.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_81",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_81.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_82",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_82.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_83",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_83.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_84",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_84.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_85",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_85.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_86",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_86.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_87",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_87.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_88",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_88.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_89",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_89.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_9",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_9.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_90",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_90.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_91",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_91.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_92",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_92.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_93",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_93.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_94",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_94.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_95",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_95.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_96",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_96.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_97",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_97.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "apoc_prop_98",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/apoc_prop_98.glb",
         "collider": "trimesh"
       },
       "tags": [

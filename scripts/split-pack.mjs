@@ -42,6 +42,16 @@ const MIN_SIZE = Number(flag('min-size', 0));
 const PREFIX = flag('prefix', null);
 const DEPTH = Number(flag('depth', 1));
 /**
+ * Skip props whose geometry is identical to one already written.
+ *
+ * A pack usually contains the same crate three times and the same barrel four,
+ * laid out around the scene. Splitting by node or by geometry island cannot
+ * know they are copies, so the palette fills up with tiles that look the same
+ * because they are the same. Matching on vertex count, triangle count and
+ * dimensions is enough to spot them and cheap enough to do on everything.
+ */
+const DEDUPE = argv.includes('--dedupe');
+/**
  * Scale the whole pack so the median prop's largest dimension is this many
  * world units. Packs arrive in whatever unit their author used — one has
  * benches 134 units long, another has buildings 0.2 units tall — and the player
@@ -160,8 +170,41 @@ async function main() {
   if (!DRY) await mkdir(OUT, { recursive: true });
 
   const used = new Set();
+  /** Geometry signatures already written, when --dedupe is on. */
+  const shapes = new Set();
   let written = 0;
   let skipped = 0;
+  let duplicates = 0;
+
+  /** Vertices, triangles and size — enough to tell copies apart from siblings. */
+  const signature = (node) => {
+    let vertices = 0;
+    let triangles = 0;
+    const visit = (n) => {
+      const mesh = n.getMesh();
+      if (mesh) {
+        for (const prim of mesh.listPrimitives()) {
+          const pos = prim.getAttribute('POSITION');
+          const idx = prim.getIndices();
+          vertices += pos ? pos.getCount() : 0;
+          triangles += (idx ? idx.getCount() : pos ? pos.getCount() : 0) / 3;
+        }
+      }
+      for (const child of n.listChildren()) visit(child);
+    };
+    visit(node);
+    const b = getBounds(node);
+    // Sorted, so the same crate turned a quarter turn still matches itself —
+    // a pack scatters copies at whatever angle looked good in the layout.
+    // Rounded to a millimetre at this scale, to absorb the float drift a
+    // round trip through another tool introduces.
+    const dims = [0, 1, 2]
+      .map((k) => b.max[k] - b.min[k])
+      .sort((x, y) => x - y)
+      .map((v) => v.toFixed(3))
+      .join('x');
+    return `${vertices}|${triangles}|${dims}`;
+  };
 
   for (let i = 0; i < names.length; i++) {
     if (re && !re.test(names[i] ?? '')) continue;
@@ -209,6 +252,19 @@ async function main() {
       t[2] - (box.min[2] + box.max[2]) / 2,
     ]);
 
+    // Compared here rather than on the pack, after prune() has stripped what
+    // the prop does not use. Two copies of the same crate can carry different
+    // amounts of dead data inside the pack and only become identical once that
+    // is gone.
+    if (DEDUPE) {
+      const key = signature(target);
+      if (shapes.has(key)) {
+        duplicates++;
+        continue;
+      }
+      shapes.add(key);
+    }
+
     // Attribution has to travel with the split, or the credits screen loses it.
     doc.getRoot().setExtras({ ...extras });
 
@@ -229,6 +285,7 @@ async function main() {
   if (DRY) console.log(`[split] dry run: ${names.length - skipped} file(s) would be written`);
   else console.log(`[split] wrote ${written} file(s) to ${path.relative(process.cwd(), OUT)}`);
   if (skipped > 0) console.log(`[split] skipped ${skipped} empty or sub-${MIN_SIZE} prop(s)`);
+  if (duplicates > 0) console.log(`[split] skipped ${duplicates} duplicate(s) of props already written`);
 }
 
 main().catch((e) => {

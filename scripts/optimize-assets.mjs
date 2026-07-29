@@ -68,7 +68,7 @@ const SIMPLIFY_TARGET_TRIS = 15000;
  * is already in public/assets/3d. Without it the mtime check would consider
  * every asset up to date and a pipeline improvement would reach nothing.
  */
-const PIPELINE_VERSION = 2;
+const PIPELINE_VERSION = 3;
 /**
  * Subdirectories of SRC this script ignores.
  *

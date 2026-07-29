@@ -425,7 +425,11 @@
       "authorUrl": "https://sketchfab.com/Chano_old",
       "license": "CC-BY-4.0",
       "licenseUrl": "http://creativecommons.org/licenses/by/4.0/",
-      "source": "https://sketchfab.com/3d-models/simple-apocalypse-2-free-6113ac4f9fe74089bbcea36b0168d80f"
+      "source": "https://sketchfab.com/3d-models/simple-apocalypse-2-free-6113ac4f9fe74089bbcea36b0168d80f",
+      "files": [
+        "apoc_prop.glb",
+        "apoc_prop_*"
+      ]
     },
     {
       "title": "Stop Sign PSX",
