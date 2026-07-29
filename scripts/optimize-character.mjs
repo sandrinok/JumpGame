@@ -10,9 +10,10 @@
  * This produces two self-contained GLBs instead:
  *
  *   player.glb      the male full-body rig, WebP textures, meshopt-compressed
- *   animations.glb  the standard clip set with all mesh data stripped; only the
- *                   node hierarchy and the AnimationClips are needed, since the
- *                   clips are retargeted onto player.glb's skeleton at runtime.
+ *   animations.glb  the clips the game actually plays, with all mesh data
+ *                   stripped; only the node hierarchy and the AnimationClips
+ *                   are needed, since the clips are retargeted onto
+ *                   player.glb's skeleton at runtime. See KEEP_CLIPS.
  *
  * Both are meshopt-compressed, so any loader reading them must have
  * MeshoptDecoder registered (see src/game/character/rig.ts).
@@ -24,14 +25,51 @@
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { dedup, prune, weld, resample, textureCompress, meshopt } from '@gltf-transform/functions';
-import { MeshoptEncoder } from 'meshoptimizer';
+import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 import sharp from 'sharp';
-import { mkdir, readFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { flattenSolidTextures } from './lib/flatten-solid-textures.mjs';
+import { textureCapFor } from './lib/texture-budget.mjs';
 
 const SRC = path.resolve('3dassets/character');
 const OUT = path.resolve('public/assets/character');
-const MAX_TEX = 1024;
+
+/**
+ * Texture memory the player rig may occupy, in megabytes.
+ *
+ * The rig arrived with five 1024 maps — 27MB, making it the single most
+ * expensive asset in the game and the one guaranteed to be resident, since the
+ * player is always on screen. In a third-person view the character covers a few
+ * hundred pixels of a 1080p frame; five megapixels of texture to fill that is
+ * roughly an order of magnitude more than the screen can show.
+ */
+const TEXTURE_BUDGET_MB = 8;
+
+/**
+ * Clips kept from the animation library.
+ *
+ * The pack ships forty-five — combat, swimming, sitting, spellcasting, driving.
+ * The game has one movement state machine and reaches for six of them, but all
+ * forty-five were downloaded, decoded and held in memory on every load.
+ *
+ * Names must match what src/game/character/rig.ts looks up; it searches
+ * case-insensitively and takes the first hit, so these are the winning
+ * alternates rather than the whole list it will try. Adding a character state
+ * means adding its clip here and re-running this script.
+ */
+const KEEP_CLIPS = new Set(
+  ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Jump_Start', 'Jump_Loop', 'Jump_Land'].map((n) =>
+    n.toLowerCase(),
+  ),
+);
+
+/**
+ * Bumped when the steps below change in a way that should invalidate what is
+ * already in public/assets/character. The mtime check alone would call every
+ * output up to date and an improvement here would reach nothing.
+ */
+const PIPELINE_VERSION = 2;
 
 const JOBS = [
   {
@@ -48,11 +86,19 @@ const JOBS = [
 
 async function main() {
   await mkdir(OUT, { recursive: true });
-  await MeshoptEncoder.ready;
+  await Promise.all([MeshoptDecoder.ready, MeshoptEncoder.ready]);
 
   const io = new NodeIO()
     .registerExtensions(ALL_EXTENSIONS)
-    .registerDependencies({ 'meshopt.encoder': MeshoptEncoder });
+    // Decoder as well as encoder, so the script can read back its own output if
+    // a raw source ever goes missing.
+    .registerDependencies({
+      'meshopt.encoder': MeshoptEncoder,
+      'meshopt.decoder': MeshoptDecoder,
+    });
+
+  const stale = await pipelineChanged();
+  if (stale) console.log(`[character] pipeline v${PIPELINE_VERSION}: rebuilding.`);
 
   for (const job of JOBS) {
     const src = path.join(SRC, job.src);
@@ -65,13 +111,14 @@ async function main() {
       console.log(`[character] source missing, skipping: ${job.src}`);
       continue;
     }
-    if (await isUpToDate(src, outFile)) {
+    if (!stale && (await isUpToDate(src, outFile))) {
       console.log(`[character] ${job.name} already up to date.`);
       continue;
     }
 
     process.stdout.write(`  ${job.name}  …  `);
     const doc = await io.read(src);
+    const notes = [];
 
     if (job.stripMeshes) {
       // Detach every mesh + skin; prune() then drops the orphaned meshes,
@@ -81,26 +128,59 @@ async function main() {
         node.setMesh(null);
         node.setSkin(null);
       }
+      const all = doc.getRoot().listAnimations();
+      let dropped = 0;
+      for (const clip of all) {
+        if (KEEP_CLIPS.has(clip.getName().toLowerCase())) continue;
+        // Channels and samplers have to go explicitly. Disposing only the clip
+        // detaches it but leaves its samplers behind as orphans that still
+        // reference their accessors, so prune() sees the keyframe data as live
+        // and keeps every byte of it — the file loses its clip list and none of
+        // its weight.
+        for (const channel of clip.listChannels()) channel.dispose();
+        for (const sampler of clip.listSamplers()) sampler.dispose();
+        clip.dispose();
+        dropped++;
+      }
+      if (dropped) notes.push(`${all.length}→${all.length - dropped} clips`);
     }
 
-    const transforms = [dedup(), prune(), resample()];
-    if (!job.stripMeshes) {
-      transforms.push(
-        weld(),
-        textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [MAX_TEX, MAX_TEX] }),
-      );
-    }
-    transforms.push(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
-
+    const report = {};
+    const transforms = [dedup()];
+    if (!job.stripMeshes) transforms.push(flattenSolidTextures(report));
+    transforms.push(prune(), resample());
     await doc.transform(...transforms);
+
+    if (!job.stripMeshes) {
+      const cap = textureCapFor(doc, TEXTURE_BUDGET_MB);
+      await doc.transform(
+        weld(),
+        textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [cap, cap] }),
+        prune(),
+      );
+      if (report.solidTexturesRemoved) notes.push(`-${report.solidTexturesRemoved} flat tex`);
+      notes.push(`tex→${cap}`);
+    }
+    await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
+
     await io.write(outFile, doc);
 
     const after = (await stat(outFile)).size;
-    const clips = doc.getRoot().listAnimations().length;
     console.log(
       `${fmt(before)} → ${fmt(after)} (-${((1 - after / before) * 100).toFixed(0)}%)` +
-        (clips > 0 ? `, ${clips} clips` : ''),
+        (notes.length ? `  [${notes.join(', ')}]` : ''),
     );
+  }
+
+  await writeFile(path.join(OUT, '.pipeline-version'), `${PIPELINE_VERSION}\n`);
+}
+
+async function pipelineChanged() {
+  try {
+    const stamp = await readFile(path.join(OUT, '.pipeline-version'), 'utf8');
+    return Number(stamp.trim()) !== PIPELINE_VERSION;
+  } catch {
+    return true;
   }
 }
 
