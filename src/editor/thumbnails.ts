@@ -44,35 +44,67 @@ export interface ThumbnailMaker {
   dispose(): void;
 }
 
+/**
+ * Previews rendered before the renderer is thrown away and remade.
+ *
+ * A WebGL context keeps every texture and buffer it has been shown, and a
+ * preview shows it the real asset — so browsing the whole palette would upload
+ * the entire library and hold it, which for this one is hundreds of megabytes
+ * of video memory on a laptop. The finished previews are PNGs and do not need
+ * any of it, so the context is recycled and the GPU copies go with it. Anything
+ * still on screen is already cached.
+ */
+const RECYCLE_AFTER = 40;
+
 export function createThumbnailMaker(): ThumbnailMaker {
   const cache = new Map<string, Promise<string>>();
 
-  const renderer = new THREE.WebGLRenderer({
-    alpha: true,
-    antialias: true,
-    // toDataURL reads the drawing buffer, which the browser is free to discard
-    // straight after a render unless it is told to keep it.
-    preserveDrawingBuffer: true,
-  });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(SIZE, SIZE);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1;
-
-  // A neutral studio environment, so metal and gloss have something to reflect.
-  // Without it anything metallic renders as a black silhouette, which for a
-  // library full of pipes, tools and vehicles is most of it.
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  pmrem.dispose();
-
   const scene = new THREE.Scene();
-  scene.environment = environment;
   const key = new THREE.DirectionalLight(0xffffff, 1.6);
   key.position.set(2, 3, 2);
   scene.add(key);
   scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+
+  let renderer: THREE.WebGLRenderer | null = null;
+  let environment: THREE.Texture | null = null;
+  let sinceRecycle = 0;
+
+  function acquireRenderer(): THREE.WebGLRenderer {
+    if (renderer) return renderer;
+    renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: true,
+      // toDataURL reads the drawing buffer, which the browser is free to discard
+      // straight after a render unless it is told to keep it.
+      preserveDrawingBuffer: true,
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(SIZE, SIZE);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
+
+    // A neutral studio environment, so metal and gloss have something to
+    // reflect. Without it anything metallic renders as a black silhouette,
+    // which for a library full of pipes, tools and vehicles is most of it.
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    scene.environment = environment;
+    sinceRecycle = 0;
+    return renderer;
+  }
+
+  function releaseRenderer(): void {
+    environment?.dispose();
+    environment = null;
+    scene.environment = null;
+    // Drops this context's copy of every asset it has drawn. The assets
+    // themselves are the registry's and are untouched.
+    renderer?.dispose();
+    renderer?.forceContextLoss();
+    renderer = null;
+  }
 
   const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
   const holder = new THREE.Group();
@@ -92,8 +124,9 @@ export function createThumbnailMaker(): ThumbnailMaker {
   let queue: Promise<unknown> = Promise.resolve();
 
   async function render(asset: ResolvedAsset): Promise<string> {
+    const active = acquireRenderer();
     // clone(true) shares geometry and materials with the registry's template,
-    // which is what makes this cheap — nothing is uploaded to the GPU twice.
+    // so nothing is duplicated on the CPU side either.
     const model = asset.template.clone(true);
     holder.add(model);
     try {
@@ -122,11 +155,12 @@ export function createThumbnailMaker(): ThumbnailMaker {
       // frame per tile, which is exactly when someone is scrolling the palette.
       // compileAsync hands it to the driver's parallel compiler instead, and
       // what is left to do on the main thread is a third of a millisecond.
-      await renderer.compileAsync(scene, camera);
-      renderer.render(scene, camera);
-      return renderer.domElement.toDataURL('image/png');
+      await active.compileAsync(scene, camera);
+      active.render(scene, camera);
+      return active.domElement.toDataURL('image/png');
     } finally {
       holder.remove(model);
+      if (++sinceRecycle >= RECYCLE_AFTER) releaseRenderer();
     }
   }
 
@@ -147,8 +181,7 @@ export function createThumbnailMaker(): ThumbnailMaker {
       // Only what this module made. The models were clones sharing the
       // registry's geometry and materials, and disposing those would blank out
       // every placed copy in the level.
-      environment.dispose();
-      renderer.dispose();
+      releaseRenderer();
       cache.clear();
     },
   };
