@@ -1,0 +1,32 @@
+# What must never reach the build context.
+#
+# Two reasons, and the first one matters more: anything copied in is readable in
+# the image and in its layer history, even if a later step deletes it. The
+# editor password lives in .env, so that stays out — it is passed to the running
+# container instead.
+.env
+.env.*
+!.env.example
+.git
+.github
+
+# Rebuilt inside the image. Copying a local build in would ship whatever state
+# this machine happened to be in.
+node_modules
+dist
+.vite
+
+# Raw asset sources — around 80MB of downloads and archives. The pipeline's
+# output is committed under public/assets, so the image does not need these, and
+# optimize-assets handles their absence by finding nothing to do.
+3dassets
+Nieuwe modellen
+
+# Local runtime state. Scores and levels belong on a volume, not in the image.
+data
+
+.claude
+.idea
+.vscode
+*.log
+.DS_Store

@@ -1,0 +1,51 @@
+# Running the game with the hardening applied, so it does not live only in a
+# README where it gets skipped. `docker compose up -d --build` and it is served
+# on 8080.
+services:
+  jumpgame:
+    build: .
+    image: jumpgame
+    restart: unless-stopped
+    ports:
+      # Bound to localhost: put nginx in front for TLS, and see DEPLOY.md for
+      # the /ws block the shared world needs. Change to "8080:8080" to expose it
+      # directly on the network.
+      - "127.0.0.1:8080:8080"
+
+    environment:
+      # Only set this when something in front really is setting
+      # X-Forwarded-For. Exposed directly, it lets anyone spoof their address
+      # past the login rate limiter.
+      TRUST_PROXY: "1"
+
+    env_file:
+      # The editor password. Optional so the game still runs without one — the
+      # editor is simply disabled, which is the right default for a public box.
+      # Kept out of the image entirely; see .dockerignore.
+      - path: .env
+        required: false
+
+    volumes:
+      # Levels and high scores. Without this every restart starts an empty
+      # scoreboard and throws away anything saved from the editor.
+      - jumpgame-data:/data
+
+    # Reap zombies and forward signals, so SIGTERM reaches Node and the
+    # shutdown handler in server/index.mjs actually runs.
+    init: true
+
+    # Nothing writes outside /data, so the rest of the filesystem does not need
+    # to be writable. /tmp is given its own tmpfs because Node expects one.
+    read_only: true
+    tmpfs:
+      - /tmp
+
+    # The server binds 8080, above the privileged range, so it needs no
+    # capabilities at all.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  jumpgame-data:

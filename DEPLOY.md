@@ -109,7 +109,81 @@ flooded; beyond that the leaderboard is exactly as honest as the people playing.
 If it ever needs to be more than that, the fix is simulating runs server-side,
 which costs more than the rest of the game.
 
+## Docker
+
+The shortest path to a running copy, and the one that cannot be broken by the
+Node version on the box or by a dependency resolving differently than it did
+last week:
+
+```sh
+docker compose up -d --build
+```
+
+Served on `127.0.0.1:8080`. Put nginx in front for TLS and the `/ws` block
+above; change the port mapping in `compose.yaml` to expose it directly instead.
+
+### What is in the image
+
+The build stage installs everything — Vite, sharp, gltf-transform — and none of
+it survives into the image that runs. The runtime layer is Node, `dist/` and
+`server/`, with **no `node_modules` at all**, because the server imports only
+`node:` builtins. There is no `npm install` when you deploy, so there is nothing
+to resolve and nothing to go wrong between building and running.
+
+`.dockerignore` keeps `.env`, `3dassets/` and the raw downloads out of the
+context. That matters beyond build speed: anything copied in stays readable in
+the layer history even if a later step deletes it, so the editor password must
+never be one of them. It is passed to the running container instead.
+
+### How it is locked down
+
+`compose.yaml` applies all of this, so it does not depend on anyone remembering
+the flags:
+
+| | why |
+|---|---|
+| `USER node` | uid 1000, never root |
+| `read_only: true` | nothing writes outside `/data` |
+| `tmpfs: /tmp` | the one place Node still expects to write |
+| `cap_drop: ALL` | port 8080 is unprivileged, so none are needed |
+| `no-new-privileges` | no setuid escalation from inside |
+| `init: true` | forwards SIGTERM so the shutdown handler runs |
+
+Running it by hand, the same thing is:
+
+```sh
+docker run -d --name jumpgame \
+  -p 127.0.0.1:8080:8080 \
+  -v jumpgame-data:/data \
+  --env-file .env -e TRUST_PROXY=1 \
+  --init --read-only --tmpfs /tmp \
+  --cap-drop ALL --security-opt no-new-privileges:true \
+  jumpgame
+```
+
+### The volume is the whole state
+
+`/data` holds saved levels and the high score table, and nothing else in the
+container is worth keeping. Lose it and you lose the scoreboard.
+
+A **named volume** (what `compose.yaml` uses) picks up the right ownership from
+the image, which creates `/data` owned by uid 1000. A **bind mount** does not —
+`-v /srv/jumpgame:/data` arrives owned by root and the server cannot write to
+it, which surfaces as high scores that never appear. Fix it on the host:
+
+```sh
+mkdir -p /srv/jumpgame && chown -R 1000:1000 /srv/jumpgame
+```
+
+### Stopping
+
+`docker stop` sends SIGTERM and waits ten seconds. The server closes the shared
+world's WebSockets properly first, so players see everyone leave rather than the
+world freezing, and then exits — usually in well under a second.
+
 ## systemd
+
+Only needed when running Node directly rather than in a container.
 
 `/etc/systemd/system/jumpgame.service`:
 
@@ -227,5 +301,7 @@ investigate.
 | High scores vanish after deploy | `SCORES_FILE` points inside `dist/`, or at a path that is not persisted |
 | High scores never appear | The server cannot write `SCORES_FILE`'s directory — check the startup log and permissions |
 | Nobody ever sees anyone else | The proxy is not forwarding the `/ws` upgrade — see above |
+| High scores never appear, in Docker | `/data` is a bind mount owned by root; `chown 1000:1000` it |
+| `docker stop` takes ten seconds | `init: true` missing, so SIGTERM never reaches Node |
 | Players vanish after a minute | `proxy_read_timeout` is shorter than the 45s idle window |
 | One wrong password locks out everyone | `TRUST_PROXY` not set while behind nginx |

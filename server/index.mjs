@@ -420,6 +420,39 @@ server.on('error', (err) => {
   process.exit(1);
 });
 
+/**
+ * Shut down when asked to, rather than when killed.
+ *
+ * `docker stop` sends SIGTERM and waits ten seconds before SIGKILL. Node's
+ * default for SIGTERM is to die immediately, which drops every WebSocket
+ * mid-frame — players see the world freeze rather than everyone leaving. Closing
+ * the room first sends them a proper close frame, and closing the server stops
+ * new connections while the reply drains.
+ */
+let stopping = false;
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.on(signal, () => {
+    // A second Ctrl-C should not queue a second shutdown behind the first.
+    if (stopping) process.exit(0);
+    stopping = true;
+    console.log(`[server] ${signal} received, shutting down`);
+    // Close frames first, so players see everyone leave.
+    room.closeAll();
+    // A browser holds a keep-alive connection open for a minute after its last
+    // request, and server.close() waits for every one of them.
+    server.closeIdleConnections?.();
+    server.close(() => process.exit(0));
+    // A WebSocket that has been upgraded stays registered with the HTTP server
+    // but is no longer an idle connection, so close() waits on it forever and
+    // the stop falls back to whatever timeout is above it. Give the close
+    // frames a moment to leave the socket, then drop what is left.
+    setTimeout(() => {
+      server.closeAllConnections?.();
+      setTimeout(() => process.exit(0), 250).unref();
+    }, 250).unref();
+  });
+}
+
 server.listen(PORT, HOST, () => {
   console.log(`[server] JumpGame on http://${HOST}:${PORT}`);
   console.log(`[server] serving ${DIST}`);
