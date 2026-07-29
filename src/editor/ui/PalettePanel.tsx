@@ -17,14 +17,66 @@ import type { ResolvedAsset } from '../../world/registry';
  */
 const thumbnails = createThumbnailMaker();
 
-/** Turn an asset id into something readable without losing what it is. */
-function prettify(id: string): string {
-  return id.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+/**
+ * Ids sharing a prefix before it counts as a pack name rather than a family.
+ *
+ * Five rather than three because a pack contains groups as well: three barrels
+ * share `psx_industrial_pack_barrel`, and at a lower threshold they would be
+ * labelled "oil", "water" and "wine" with the word "barrel" stripped away as
+ * though it were the pack's name.
+ */
+const PREFIX_SHARED_BY = 5;
+/** A label shorter than this is no label at all, so the prefix stays. */
+const MIN_LABEL = 3;
+
+/**
+ * Work out what to call each asset on its tile.
+ *
+ * A split pack leaves every prop carrying the pack's name —
+ * `psx_industrial_pack_barrel_oil` and thirty-five siblings — and in a tile
+ * eighty pixels wide all thirty-six read "psx industrial …". The distinguishing
+ * part is at the end, so the shared prefix is dropped.
+ *
+ * Only prefixes several assets actually share, and never when what is left
+ * would be shorter than a word: `city_road`, `city_road_2` and `city_road_3`
+ * share "city road", and stripping it would label them "2" and "3".
+ */
+function labelsFor(ids: string[]): Map<string, string> {
+  const counts = new Map<string, number>();
+  for (const id of ids) {
+    const parts = id.split('_');
+    for (let i = 1; i < parts.length; i++) {
+      const prefix = parts.slice(0, i).join('_');
+      counts.set(prefix, (counts.get(prefix) ?? 0) + 1);
+    }
+  }
+
+  const labels = new Map<string, string>();
+  for (const id of ids) {
+    const parts = id.split('_');
+    let label = id;
+    // Longest first, so the pack name wins over the word it starts with.
+    for (let i = parts.length - 1; i >= 1; i--) {
+      const prefix = parts.slice(0, i).join('_');
+      if ((counts.get(prefix) ?? 0) < PREFIX_SHARED_BY) continue;
+      const rest = id.slice(prefix.length + 1);
+      if (rest.length >= MIN_LABEL) {
+        label = rest;
+        break;
+      }
+    }
+    labels.set(id, label.replace(/[_-]+/g, ' ').trim());
+  }
+  return labels;
 }
 
 export function PalettePanel(): JSX.Element | null {
   const { assets, paletteCurrent, paletteVisible } = useEditorUi();
   const [filter, setFilter] = useState('');
+
+  // Derived from the whole library, not the filtered view, so a label does not
+  // change as you type.
+  const labels = useMemo(() => labelsFor(assets.map((a) => a.id)), [assets]);
 
   // Every word has to match, so "city car" finds city_vehicles_cars without
   // caring about the order or the underscores between them.
@@ -67,7 +119,12 @@ export function PalettePanel(): JSX.Element | null {
         )}
         <div className="grid grid-cols-3 gap-1">
           {shown.map((a) => (
-            <AssetTile key={a.id} asset={a} selected={paletteCurrent === a.id} />
+            <AssetTile
+              key={a.id}
+              asset={a}
+              label={labels.get(a.id) ?? a.id}
+              selected={paletteCurrent === a.id}
+            />
           ))}
         </div>
       </CardContent>
@@ -89,7 +146,15 @@ export function PalettePanel(): JSX.Element | null {
   );
 }
 
-function AssetTile({ asset, selected }: { asset: ResolvedAsset; selected: boolean }): JSX.Element {
+function AssetTile({
+  asset,
+  label,
+  selected,
+}: {
+  asset: ResolvedAsset;
+  label: string;
+  selected: boolean;
+}): JSX.Element {
   const actions = useEditorActions();
   const ref = useRef<HTMLButtonElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -160,7 +225,7 @@ function AssetTile({ asset, selected }: { asset: ResolvedAsset; selected: boolea
         into a column of text again.
       */}
       <span className="w-full truncate text-center text-[9px] leading-tight text-muted-foreground group-hover:text-foreground">
-        {prettify(asset.id)}
+        {label}
       </span>
     </button>
   );

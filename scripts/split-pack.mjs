@@ -61,10 +61,17 @@ if (!SRC) {
  *
  * Exporters bury everything under a chain of single-child wrappers
  * (Sketchfab_model > root > GLTF_SceneRootNode > ...), which carry no meaning.
+ *
+ * Not every exporter does. Blender writes each object as a sibling at the root,
+ * so there is no wrapper to descend through and the scene is already the
+ * container — taking listChildren()[0] there would walk into the first prop and
+ * report a forty-two piece pack as containing one barrel.
  */
 function findContainer(scene) {
-  let node = scene.listChildren()[0];
-  if (!node) return null;
+  const children = scene.listChildren();
+  if (children.length === 0) return null;
+  if (children.length > 1) return scene;
+  let node = children[0];
   while (node.listChildren().length === 1 && !node.getMesh()) {
     node = node.listChildren()[0];
   }

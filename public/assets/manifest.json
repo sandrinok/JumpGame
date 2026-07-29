@@ -1554,6 +1554,677 @@
       "tags": [
         "imported"
       ]
+    },
+    {
+      "id": "emergency_power_station_ps1",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/emergency_power_station_ps1.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "lowpoly_shawarma_skewer_psx",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/lowpoly_shawarma_skewer_psx.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "low_poly_pizza",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/low_poly_pizza.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "moai_low_poly_game_ready",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/moai_low_poly_game_ready.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "ps1lowpoly_gravestone",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/ps1lowpoly_gravestone.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "ps1_retro_concrete_mixer",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/ps1_retro_concrete_mixer.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_birch_tree",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_birch_tree.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_barrel_oil",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_barrel_oil.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_barrel_water",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_barrel_water.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_barrel_wine",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_barrel_wine.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_brick",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_brick.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_brick_cement",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_brick_cement.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_cargo_container",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_cargo_container.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_concrete_pipe",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_concrete_pipe.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_concrete_pipe_pile",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_concrete_pipe_pile.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_crate",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_crate.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_crate_metal",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_crate_metal.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_crate_metal2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_crate_metal2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_crate_wood",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_crate_wood.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_crate_wood2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_crate_wood2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_dumpster",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_dumpster.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_generator_portable",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_generator_portable.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_generator_unit",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_generator_unit.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_jerrycan",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_jerrycan.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_locker",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_locker.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_locker2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_locker2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_metal_pipe",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_metal_pipe.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_metal_pipe_pile",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_metal_pipe_pile.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_metal_sheet",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_metal_sheet.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_pallet",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_pallet.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_pile_debris",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_pile_debris.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_pile_trash",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_pile_trash.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_plank",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_plank.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_plank_wide",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_plank_wide.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_propane_tank",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_propane_tank.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_propane_tank_small",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_propane_tank_small.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_rock",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_rock.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_spool",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_spool.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_tire",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_tire.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_tires",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_tires.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_transformer_box",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_transformer_box.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_trash_can",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_trash_can.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_industrial_pack_trash_container",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_industrial_pack_trash_container.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_low_poly_acoustic_guitar",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_low_poly_acoustic_guitar.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_low_poly_shopping_cart",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_low_poly_shopping_cart.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_prop_old_garage",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_prop_old_garage.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_retro_computer",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_retro_computer.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_style_pizza_and_coke",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_style_pizza_and_coke.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "psx_style_trees",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/psx_style_trees.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "stop_sign_psx",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/stop_sign_psx.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_bush_big2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_bush_big2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_bush_flower_small",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_bush_flower_small.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_bush_med",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_bush_med.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_bush_med2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_bush_med2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_bush_small",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_bush_small.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_bush_small2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_bush_small2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_mush_big",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_mush_big.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_pine1",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_pine1.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_pine2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_pine2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_tree2",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_tree2.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "trees_and_bush_pack_tree_small",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/trees_and_bush_pack_tree_small.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
     }
   ]
 }
