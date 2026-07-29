@@ -240,7 +240,7 @@ function createBody(
       case 'convex':
       case 'trimesh':
       default: {
-        const { vertices, indices } = collectMeshGeometry(asset.template, p.scale);
+        const { vertices, indices } = colliderMesh(asset, p.scale);
         const built =
           colliderType === 'trimesh'
             ? RAPIER.ColliderDesc.trimesh(vertices, indices)
@@ -264,46 +264,105 @@ function quatFromEuler(rot: [number, number, number]) {
   return { x: q.x, y: q.y, z: q.z, w: q.w };
 }
 
-function collectMeshGeometry(
-  root: THREE.Object3D,
-  scale: [number, number, number],
-): { vertices: Float32Array; indices: Uint32Array } {
-  const verts: number[] = [];
-  const idx: number[] = [];
-  let offset = 0;
+interface ColliderMesh {
+  vertices: Float32Array;
+  indices: Uint32Array;
+}
 
+/**
+ * Collision geometry for each asset at unit scale, built once per asset.
+ *
+ * Flattening a model's hierarchy into one vertex soup means walking every node,
+ * reading every vertex through the attribute API and transforming it. Doing
+ * that per placement meant a level with forty of the same crate paid for the
+ * same crate forty times, and the cost is per *vertex*, so the assets it hurt
+ * most were the detailed ones a level is most likely to repeat.
+ *
+ * Keyed on the resolved asset rather than its id, so re-registering an id —
+ * which the editor does on drag-and-drop import — cannot serve stale geometry.
+ */
+const unitMeshCache = new WeakMap<ResolvedAsset, ColliderMesh>();
+
+/**
+ * Collision geometry for one placement.
+ *
+ * Only the scaling is redone per placement, which is a flat pass over a typed
+ * array rather than a graph walk. Unscaled placements — the common case — share
+ * the cached buffer outright; Rapier copies vertex data into its own heap when
+ * the collider is created, so handing the same array to several colliders is
+ * safe.
+ */
+function colliderMesh(asset: ResolvedAsset, scale: [number, number, number]): ColliderMesh {
+  let unit = unitMeshCache.get(asset);
+  if (!unit) {
+    unit = collectMeshGeometry(asset.template);
+    unitMeshCache.set(asset, unit);
+  }
+  const [sx, sy, sz] = scale;
+  if (sx === 1 && sy === 1 && sz === 1) return unit;
+
+  const vertices = new Float32Array(unit.vertices.length);
+  for (let i = 0; i < vertices.length; i += 3) {
+    vertices[i] = unit.vertices[i] * sx;
+    vertices[i + 1] = unit.vertices[i + 1] * sy;
+    vertices[i + 2] = unit.vertices[i + 2] * sz;
+  }
+  return { vertices, indices: unit.indices };
+}
+
+function collectMeshGeometry(root: THREE.Object3D): ColliderMesh {
   // Ensure world matrices are current. The template root's own transform should
   // be identity (we never mutate it); sub-mesh matrices may not be.
   root.updateMatrixWorld(true);
   const rootInverse = new THREE.Matrix4().copy(root.matrixWorld).invert();
 
-  // Reused scratch
-  const localMatrix = new THREE.Matrix4();
-  const v = new THREE.Vector3();
-
+  const meshes: THREE.Mesh[] = [];
+  let vertexCount = 0;
+  let indexCount = 0;
   root.traverse((o) => {
     const m = o as THREE.Mesh;
-    if (!m.isMesh || !m.geometry) return;
+    if (!m.isMesh || !m.geometry?.attributes.position) return;
+    meshes.push(m);
+    vertexCount += m.geometry.attributes.position.count;
+    indexCount += m.geometry.index?.count ?? m.geometry.attributes.position.count;
+  });
+
+  // Sized up front and filled in place. Growing plain arrays and converting at
+  // the end costs a reallocation-heavy first pass and a full copy afterwards,
+  // which on a detailed model is hundreds of thousands of elements.
+  const vertices = new Float32Array(vertexCount * 3);
+  const indices = new Uint32Array(indexCount);
+  let v = 0;
+  let iOut = 0;
+  let base = 0;
+
+  const localMatrix = new THREE.Matrix4();
+  const point = new THREE.Vector3();
+
+  for (const m of meshes) {
     const geo = m.geometry;
     const pos = geo.attributes.position;
-    if (!pos) return;
 
     // Mesh transform expressed in the root's local frame
     localMatrix.copy(rootInverse).multiply(m.matrixWorld);
 
     for (let i = 0; i < pos.count; i++) {
-      v.set(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(localMatrix);
-      verts.push(v.x * scale[0], v.y * scale[1], v.z * scale[2]);
+      point.fromBufferAttribute(pos as THREE.BufferAttribute, i).applyMatrix4(localMatrix);
+      vertices[v++] = point.x;
+      vertices[v++] = point.y;
+      vertices[v++] = point.z;
     }
+
     const indexAttr = geo.index;
     if (indexAttr) {
-      for (let i = 0; i < indexAttr.count; i++) idx.push(indexAttr.getX(i) + offset);
+      for (let i = 0; i < indexAttr.count; i++) indices[iOut++] = indexAttr.getX(i) + base;
     } else {
-      for (let i = 0; i < pos.count; i++) idx.push(i + offset);
+      for (let i = 0; i < pos.count; i++) indices[iOut++] = i + base;
     }
-    offset += pos.count;
-  });
-  return { vertices: new Float32Array(verts), indices: new Uint32Array(idx) };
+    base += pos.count;
+  }
+
+  return { vertices, indices };
 }
 
 export async function loadLevel(url: string): Promise<Level> {
