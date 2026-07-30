@@ -4,7 +4,7 @@ import { createPostFx } from './render/postFx';
 import { detectTier, qualityFor } from './render/quality';
 import { FollowCamera } from './render/followCamera';
 import { startLoop } from './core/loop';
-import { Input } from './core/input';
+import { Input, isTypingTarget } from './core/input';
 import { addStaticGround, initPhysics } from './physics/world';
 import { createCharacter } from './physics/character';
 import {
@@ -27,6 +27,8 @@ import { createStartScreen } from './ui/startScreen';
 import { createCreditsScreen } from './ui/creditsScreen';
 import { playWindBurst, unlockAudio } from './audio/sfx';
 import { createDebugHud } from './ui/debugHud';
+import { createOnlinePanel } from './ui/onlinePanel';
+import { createChat } from './ui/chat';
 import { createGpuTimer } from './render/gpuTimer';
 import { installDevHandles } from './render/bench';
 
@@ -142,6 +144,24 @@ createRemotePlayers(
   })
   .catch((e) => console.warn('[multiplayer] remote avatars unavailable:', e));
 
+const onlinePanel = createOnlinePanel(container);
+const chat = createChat(container);
+chat.onSend = (text) => net.say(text);
+chat.onOpenChange = (isOpen) => {
+  if (isOpen) {
+    // Drop anything held, or the character keeps walking while you type.
+    input.clearKeys();
+    input.lockOnClick = false;
+    // Give the cursor back. Releasing the pointer normally means the run has
+    // ended, which is why the handler below has to know chat is why it went.
+    if (document.pointerLockElement) document.exitPointerLock();
+  } else {
+    input.lockOnClick = running && currentMode === 'play';
+  }
+};
+net.onChat = (message) => chat.push(message);
+net.onScores = (scores) => startScreen.setScores(scores);
+
 const gpuTimer = createGpuTimer(renderer);
 const debugHud = createDebugHud(container, {
   gpu: gpuTimer,
@@ -150,6 +170,7 @@ const debugHud = createDebugHud(container, {
   bufferSize: () => postFx.bufferSize,
 });
 window.addEventListener('keydown', (e) => {
+  if (isTypingTarget(e)) return;
   if (e.code === 'F3') {
     debugHud.toggle();
     e.preventDefault();
@@ -223,7 +244,7 @@ async function toggleEditor(): Promise<void> {
 }
 
 window.addEventListener('keydown', (e) => {
-  if (e.code !== 'F2') return;
+  if (isTypingTarget(e) || e.code !== 'F2') return;
   e.preventDefault();
   void toggleEditor();
 });
@@ -245,6 +266,26 @@ startScreen.onPlay = () => {
   hasLanded = false;
 };
 input.lockOnClick = false;
+
+/**
+ * Longest a new personal best may go unrecorded while a run continues.
+ *
+ * A score used to reach the server only when a run ended, so a browser that
+ * crashed, a laptop that slept, or simply a long session recorded nothing at
+ * all. Sending on every improvement would be a request per frame while
+ * climbing, so improvements are banked on this interval instead.
+ */
+const BEST_SUBMIT_INTERVAL_MS = 4000;
+let lastBestSubmit = 0;
+
+/** Record the run so far if it has improved and enough time has passed. */
+function trackBest(): void {
+  if (runMaxHeight <= score.best) return;
+  const now = performance.now();
+  if (now - lastBestSubmit < BEST_SUBMIT_INTERVAL_MS) return;
+  lastBestSubmit = now;
+  commitRun();
+}
 
 /**
  * End the run and go back to the menu.
@@ -272,10 +313,20 @@ function leaveRun(): void {
 // itself is the signal, and the key handler only covers playing without
 // mouse-look, where no lock was ever taken.
 document.addEventListener('pointerlockchange', () => {
-  if (!document.pointerLockElement) leaveRun();
+  // Typing released it on purpose; that is not the end of a run.
+  if (!document.pointerLockElement && !chat.isOpen) leaveRun();
 });
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Escape') leaveRun();
+  // Escape closes whatever is being typed in before it ends the run.
+  if (isTypingTarget(e)) return;
+  if (e.code === 'Escape') {
+    leaveRun();
+    return;
+  }
+  if ((e.code === 'Enter' || e.code === 'NumpadEnter') && running && currentMode === 'play') {
+    e.preventDefault();
+    chat.open();
+  }
 });
 
 handleResize(renderer, camera, container);
@@ -322,6 +373,7 @@ installDevHandles({
   camera: () => editor?.activeCamera ?? camera,
   level: levelHandle,
   registry,
+  net,
 });
 
 startLoop(
@@ -337,7 +389,10 @@ startLoop(
       const height = player.currPos.y - FEET_OFFSET;
       hud.setHeight(height);
       if (player.grounded) hasLanded = true;
-      if (hasLanded && height > runMaxHeight) runMaxHeight = height;
+      if (hasLanded && height > runMaxHeight) {
+        runMaxHeight = height;
+        trackBest();
+      }
 
       // killY is a world coordinate, so it is compared against the body rather
       // than the height shown to the player.
@@ -371,6 +426,7 @@ startLoop(
           ],
           y: player.visualRoot.rotation.y,
           a: player.rig?.current ?? 'idle',
+          h: player.currPos.y - FEET_OFFSET,
         });
       } else {
         // Keep the rig breathing behind the start screen. The mixer only ran
@@ -392,6 +448,11 @@ startLoop(
     // are still there behind the menu.
     remotePlayers?.update(net.others);
     remotePlayers?.render(frameDt);
+    onlinePanel.update(
+      running ? { name: score.name, colour: score.colour, height: player.currPos.y - FEET_OFFSET } : null,
+      net.others,
+      net.connected,
+    );
 
     updateSky(frameDt);
     // Resolution follows the frame budget. Fed the real frame interval, not the

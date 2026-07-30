@@ -38,6 +38,8 @@ export interface DevSubjects {
   /** The live level and asset registry, for stress-testing placement cost. */
   level: unknown;
   registry: unknown;
+  /** The shared-world connection, for checking whether it is actually up. */
+  net: unknown;
 }
 
 export interface DevHandles extends DevSubjects {

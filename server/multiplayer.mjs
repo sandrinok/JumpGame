@@ -30,9 +30,34 @@ const MAX_PLAYERS = 16;
 /** Animation states a client may claim, matching src/game/character/rig.ts. */
 const STATES = new Set(['idle', 'walk', 'run', 'jump', 'fall', 'land']);
 
+/** Longest chat message accepted. Past this it is a paste, not a sentence. */
+const MAX_CHAT_LENGTH = 200;
+/**
+ * Chat allowance per player: this many messages within the window.
+ *
+ * Generous enough that nobody typing quickly notices, tight enough that one
+ * person cannot scroll everyone else's chat away.
+ */
+const CHAT_BURST = 6;
+const CHAT_WINDOW_MS = 8000;
+
 /** A nameless player still needs a label over their head. */
 function cleanName(value) {
   return cleanScoreName(value) ?? 'Player';
+}
+
+/**
+ * Clean a chat message, or return null if there is nothing left to send.
+ *
+ * Only control characters are stripped, and only because they would break the
+ * rendering rather than because of what they say. The text reaches the client as
+ * a string and is put on screen as text, never as markup, so the escaping
+ * question is settled there rather than by filtering here.
+ */
+function cleanChat(value) {
+  if (typeof value !== 'string') return null;
+  const text = value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
+  return text.length === 0 ? null : text.slice(0, MAX_CHAT_LENGTH);
 }
 
 /** Accept a colour only as #rrggbb, so it can be dropped into a style safely. */
@@ -57,6 +82,9 @@ export function createRoom() {
     p: p.p.map((v) => Math.round(v * 100) / 100),
     y: Math.round(p.yaw * 100) / 100,
     a: p.state,
+    // Current height, so everyone can see who is climbing without waiting for
+    // a run to end and reach the scoreboard.
+    h: Math.round(p.height * 10) / 10,
   });
 
   function broadcast(message) {
@@ -112,6 +140,9 @@ export function createRoom() {
         p: [0, 0, 0],
         yaw: 0,
         state: 'idle',
+        height: 0,
+        /** Timestamps of recent chat messages, for the rate limit. */
+        chatTimes: [],
         /** Until a first position arrives, this player is not shown to anyone. */
         moved: false,
       };
@@ -137,11 +168,32 @@ export function createRoom() {
           player.p = [finite(p[0]), finite(p[1]), finite(p[2])];
           player.yaw = finite(msg.y);
           player.state = STATES.has(msg.a) ? msg.a : 'idle';
+          player.height = finite(msg.h);
           player.moved = true;
           // A name change mid-session — someone fixing their spelling between
           // runs — arrives on the state message rather than a second hello.
           if (typeof msg.name === 'string') player.name = cleanName(msg.name);
           if (typeof msg.colour === 'string') player.colour = cleanColour(msg.colour);
+          return;
+        }
+        if (msg?.t === 'chat') {
+          const text = cleanChat(msg.text);
+          if (!text) return;
+          const now = Date.now();
+          player.chatTimes = player.chatTimes.filter((t) => now - t < CHAT_WINDOW_MS);
+          if (player.chatTimes.length >= CHAT_BURST) return;
+          player.chatTimes.push(now);
+          // Name and colour come from the connection, not from the message, so
+          // nobody can put words in somebody else's mouth.
+          broadcast({
+            t: 'chat',
+            id: conn.id,
+            name: player.name,
+            colour: player.colour,
+            text,
+            at: now,
+          });
+          console.log(`[chat] ${player.name}: ${text}`);
         }
       };
 
@@ -150,6 +202,17 @@ export function createRoom() {
         broadcast({ t: 'left', id: conn.id });
         if (players.size === 0) stop();
       };
+    },
+
+    /**
+     * Push a new scoreboard to everyone connected.
+     *
+     * Called when a score is recorded, so every open leaderboard updates itself
+     * instead of waiting for someone to reopen the menu.
+     */
+    announceScores(scores) {
+      if (players.size === 0) return;
+      broadcast({ t: 'scores', scores });
     },
 
     /** Close every connection. Used when the process is shutting down. */

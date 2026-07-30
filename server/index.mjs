@@ -268,7 +268,12 @@ async function handleScores(req, res, method) {
 
   try {
     const { improved, entries } = await scores.submit({ name, height });
-    if (improved) console.log(`[scores] ${name} — ${height.toFixed(1)}m`);
+    if (improved) {
+      console.log(`[scores] ${name} — ${height.toFixed(1)}m`);
+      // Push it to everyone in the shared world, so the board on their screen
+      // moves the moment it happens instead of when they next open the menu.
+      room.announceScores(entries);
+    }
     sendJson(res, 200, { ok: true, improved, scores: entries });
   } catch (e) {
     console.error('[scores] save failed:', e);

@@ -18,12 +18,24 @@ export interface RemoteState {
   /** Facing, in radians. */
   y: number;
   a: CharacterState;
+  /** Current height above the ground, in metres. */
+  h: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  name: string;
+  colour: string;
+  text: string;
+  /** Epoch milliseconds, as stamped by the server. */
+  at: number;
 }
 
 export interface LocalState {
   p: [number, number, number];
   y: number;
   a: CharacterState;
+  h: number;
 }
 
 export interface Multiplayer {
@@ -38,6 +50,12 @@ export interface Multiplayer {
   setIdentity(name: string, colour: string): void;
   /** Called whenever the set of players changes, for the UI. */
   onRoster: ((others: RemoteState[]) => void) | null;
+  /** Called for each chat message, including this player's own. */
+  onChat: ((message: ChatMessage) => void) | null;
+  /** Called when the server pushes an updated scoreboard. */
+  onScores: ((scores: Array<{ name: string; height: number; at?: number }>) => void) | null;
+  /** Say something to everyone. The server supplies the name and colour. */
+  say(text: string): void;
   disconnect(): void;
 }
 
@@ -71,6 +89,13 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
       return socket?.readyState === WebSocket.OPEN;
     },
     onRoster: null,
+    onChat: null,
+    onScores: null,
+    say(text) {
+      const trimmed = text.trim();
+      if (!trimmed || socket?.readyState !== WebSocket.OPEN) return;
+      socket.send(JSON.stringify({ t: 'chat', text: trimmed }));
+    },
     send(state) {
       if (socket?.readyState !== WebSocket.OPEN) return;
       // Throttled here rather than at the call site, so the game loop can just
@@ -84,6 +109,7 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
           p: state.p,
           y: state.y,
           a: state.a,
+          h: state.h,
           name: identity.name,
           colour: identity.colour,
         }),
@@ -121,7 +147,17 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
     };
 
     ws.onmessage = (event) => {
-      let msg: { t?: string; id?: string; tickMs?: number; players?: RemoteState[] };
+      let msg: {
+        t?: string;
+        id?: string;
+        tickMs?: number;
+        players?: RemoteState[];
+        scores?: Array<{ name: string; height: number; at?: number }>;
+        name?: string;
+        colour?: string;
+        text?: string;
+        at?: number;
+      };
       try {
         msg = JSON.parse(String(event.data));
       } catch {
@@ -137,6 +173,20 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
         // drawn from the simulation, not from a round trip through the server.
         others = msg.players.filter((p) => p.id !== selfId);
         api.onRoster?.(others);
+        return;
+      }
+      if (msg.t === 'chat' && typeof msg.text === 'string') {
+        api.onChat?.({
+          id: msg.id ?? '',
+          name: msg.name ?? 'Player',
+          colour: msg.colour ?? '#cccccc',
+          text: msg.text,
+          at: msg.at ?? Date.now(),
+        });
+        return;
+      }
+      if (msg.t === 'scores' && Array.isArray(msg.scores)) {
+        api.onScores?.(msg.scores);
         return;
       }
       if (msg.t === 'left') {

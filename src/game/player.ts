@@ -15,6 +15,20 @@ const AIR_CONTROL = 0.6;
 const ACCEL_GROUND = 60;
 const ACCEL_AIR = 20;
 const TURN_RATE = 12;
+/**
+ * How long the character has to be off the ground before the rig plays an
+ * airborne clip.
+ *
+ * The character controller reports contact per step, and walking across a seam
+ * between two colliders, over a bump, or downhill at speed loses it for a single
+ * step at a time. Reading that directly, the rig dropped into the fall clip for
+ * one frame — and because state changes crossfade over 0.18s, one frame of it is
+ * a visible lurch that reads as the animation being broken.
+ *
+ * Deliberately the same as COYOTE_TIME, so the rig goes airborne at exactly the
+ * moment the jump stops being available. The two answer the same question.
+ */
+const AIR_ANIM_GRACE = COYOTE_TIME;
 /** Movement below this is float noise, not the controller blocking us. */
 const CONTACT_EPSILON = 1e-4;
 
@@ -35,6 +49,8 @@ export interface Player {
   prevYaw: number;
   coyote: number;
   jumpBuffer: number;
+  /** Seconds since the character last had ground under it. */
+  airTime: number;
   jumping: boolean;
   /** ticks down after a jump press; while >0 the rig plays the jump_start one-shot */
   jumpTrigger: number;
@@ -70,6 +86,7 @@ export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
     prevYaw: 0,
     coyote: 0,
     jumpBuffer: 0,
+    airTime: 0,
     jumping: false,
     jumpTrigger: 0,
     landTimer: 0,
@@ -84,6 +101,9 @@ export function respawnPlayer(player: Player, pos: [number, number, number], yaw
   player.grounded = false;
   player.coyote = 0;
   player.jumpBuffer = 0;
+  // Respawning drops the player from the spawn point, so they start airborne
+  // for real rather than easing into it.
+  player.airTime = AIR_ANIM_GRACE;
   player.jumping = false;
   player.jumpTrigger = 0;
   player.landTimer = 0;
@@ -229,6 +249,8 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
   });
   const wasGrounded = player.grounded;
   player.grounded = body.controller.computedGrounded();
+  if (player.grounded) player.airTime = 0;
+  else player.airTime += dt;
   if (player.grounded && !wasGrounded) {
     const impact = Math.min(2, Math.abs(player.velocity.y) / 8);
     if (impact > 0.2) {
@@ -242,12 +264,11 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
   if (player.rig) {
     const horizSpeed = Math.hypot(player.velocity.x, player.velocity.z);
     const next = pickState({
-      grounded: player.grounded,
+      airborne: player.airTime > AIR_ANIM_GRACE,
       speed: horizSpeed,
       runSpeed: RUN_SPEED,
       verticalVelocity: player.velocity.y,
       justJumped: player.jumpTrigger > 0,
-      justLanded: player.landTimer > 0,
       landTimer: player.landTimer,
     });
     // Only the state decision belongs to the fixed step; the mixer is advanced

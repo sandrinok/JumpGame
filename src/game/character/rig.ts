@@ -139,18 +139,21 @@ export function setState(rig: CharacterRig, next: CharacterState): void {
 }
 
 export interface PickStateOpts {
-  grounded: boolean;
+  /**
+   * Off the ground long enough to mean it — not merely on the frame the
+   * character controller happened to lose contact. See AIR_ANIM_GRACE.
+   */
+  airborne: boolean;
   speed: number;
   runSpeed: number;
   verticalVelocity: number;
   justJumped: boolean;
-  justLanded: boolean;
   landTimer: number;
 }
 
 export function pickState(opts: PickStateOpts): CharacterState {
   if (opts.justJumped) return 'jump';
-  if (!opts.grounded) {
+  if (opts.airborne) {
     return opts.verticalVelocity > 1.5 ? 'jump' : 'fall';
   }
   if (opts.landTimer > 0) return 'land';

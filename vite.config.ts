@@ -64,6 +64,10 @@ function levelSavePlugin(): Plugin {
         const height = cleanHeight(body?.height);
         if (!name || height === null) return send(400, { error: 'need a name and a height' });
         const { improved, entries } = await scores.submit({ name, height });
+        // Same push as the production server does. Leaving it out here meant a
+        // live scoreboard that worked in production and not in development,
+        // which is the worst way round.
+        if (improved) room.announceScores(entries);
         send(200, { ok: true, improved, scores: entries });
       });
 
