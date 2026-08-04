@@ -11,6 +11,12 @@ export class History {
   private redoStack: Command[] = [];
   /** Commands collected since beginBatch(), or null when not batching. */
   private batch: Command[] | null = null;
+  /**
+   * Fired whenever the level changes through the history — recorded, undone or
+   * redone. clear() does not fire it: it is used when the level is replaced
+   * wholesale, and the caller decides what that means for unsaved state.
+   */
+  onChange: (() => void) | null = null;
 
   /** Run a command and record it. */
   exec(cmd: Command): void {
@@ -59,6 +65,7 @@ export class History {
   }
 
   private push(cmd: Command): void {
+    this.onChange?.();
     if (this.batch) {
       this.batch.push(cmd);
       return;
@@ -73,6 +80,7 @@ export class History {
     if (!cmd) return;
     cmd.undo();
     this.redoStack.push(cmd);
+    this.onChange?.();
   }
 
   redo(): void {
@@ -80,6 +88,7 @@ export class History {
     if (!cmd) return;
     cmd.do();
     this.undoStack.push(cmd);
+    this.onChange?.();
   }
 
   clear(): void {

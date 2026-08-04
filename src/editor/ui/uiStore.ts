@@ -2,6 +2,7 @@ import type { ResolvedAsset } from '../../world/registry';
 import type { RenderedPlacement } from '../../world/level';
 import type { DebugMode } from '../../physics/debugView';
 import type { AssetColliderOverride, Placement } from '../../world/types';
+import type { LevelSummary } from '../../persistence/levelLibrary';
 
 export type GizmoMode = 'translate' | 'rotate' | 'scale';
 
@@ -42,6 +43,24 @@ export interface EditorUiState {
   paletteVisible: boolean;
   outlinerCollapsed: boolean;
   hotkeysCollapsed: boolean;
+  /** Levels on the server, for the level browser. Empty until first refresh. */
+  levels: LevelSummary[];
+  /** A listing or a level load is in flight. */
+  levelsLoading: boolean;
+  /** Last listing/load failure, shown in the browser. */
+  levelsError: string | null;
+  /** Filename of the loaded level, e.g. "dev.json". null = never saved anywhere. */
+  currentLevel: string | null;
+  /**
+   * Edits made since the level was last loaded or saved.
+   *
+   * Set from the undo history, so it goes true on any recorded change and stays
+   * true even if you undo back to where you started. It decides whether loading
+   * another level asks first, and erring towards asking is the harmless way
+   * round.
+   */
+  dirty: boolean;
+  levelsCollapsed: boolean;
 }
 
 export type Listener = () => void;
@@ -66,6 +85,12 @@ const initial: EditorUiState = {
   paletteVisible: true,
   outlinerCollapsed: false,
   hotkeysCollapsed: true,
+  levels: [],
+  levelsLoading: false,
+  levelsError: null,
+  currentLevel: null,
+  dirty: false,
+  levelsCollapsed: false,
 };
 
 let state: EditorUiState = initial;

@@ -21,7 +21,8 @@ const TOP_N = 20;
  * the one browser it was stored in — everyone saw their own score and called it
  * the record.
  */
-export function createLeaderboard(): LeaderboardPanel {
+/** @param mapId which map's table this panel shows. */
+export function createLeaderboard(mapId: string): LeaderboardPanel {
   const root = document.createElement('div');
   root.style.cssText = `
     width: 300px; max-width: calc(100vw - 48px);
@@ -121,7 +122,7 @@ export function createLeaderboard(): LeaderboardPanel {
     },
     async refresh() {
       const mine = ++generation;
-      const scores = await fetchScores();
+      const scores = await fetchScores(mapId);
       // A refresh triggered while this one was in flight has already drawn
       // something newer; do not paint over it with a stale board.
       if (mine !== generation) return;

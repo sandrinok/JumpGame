@@ -9,6 +9,7 @@
  *   GET    /api/session          is this browser logged in?
  *   POST   /api/session          { password } -> sets the session cookie
  *   DELETE /api/session          log out
+ *   GET    /api/levels           the levels available to load
  *   PUT    /api/level/<name>.json  save a level (requires session)
  *   GET    /api/scores           the shared high score table
  *   POST   /api/scores           { name, height } -> record a run
@@ -39,8 +40,10 @@ import {
   sweepRateLimit,
   verifyPassword,
 } from './auth.mjs';
-import { cleanHeight, cleanName, createScoreBoard } from './scores.mjs';
+import { cleanHeight, cleanName } from './scores.mjs';
+import { createBoards } from './boards.mjs';
 import { createRoom } from './multiplayer.mjs';
+import { LEVEL_NAME, listLevels } from './levels.mjs';
 
 // process.loadEnvFile() needs Node >= 20.12. On an older runtime it would throw
 // and the catch below would swallow it, leaving the editor mysteriously
@@ -77,9 +80,9 @@ const SCORES_FILE = resolve(process.env.SCORES_FILE ?? join('data', 'scores.json
 
 const MAX_LEVEL_BYTES = 5 * 1024 * 1024;
 const MAX_SCORE_BYTES = 1024;
-const LEVEL_NAME = /^[a-zA-Z0-9_-]{1,64}\.json$/;
 
-const scores = createScoreBoard(SCORES_FILE);
+// One table per map. See boards.mjs for why they are not pooled.
+const boards = await createBoards(SCORES_FILE);
 const room = createRoom();
 
 const MIME = {
@@ -236,9 +239,10 @@ async function handleLevelSave(req, res, name) {
  * the alternative — simulating each run on the server — would cost more than
  * the whole game.
  */
-async function handleScores(req, res, method) {
+async function handleScores(req, res, method, mapId) {
+  const scores = boards.for(mapId);
   if (method === 'GET') {
-    sendJson(res, 200, { scores: await scores.top() });
+    sendJson(res, 200, { map: mapId, scores: await scores.top() });
     return;
   }
   if (method !== 'POST') {
@@ -246,7 +250,7 @@ async function handleScores(req, res, method) {
     return;
   }
 
-  if (!scores.allow(clientIp(req))) {
+  if (!boards.allow(clientIp(req))) {
     sendJson(res, 429, { error: 'too many submissions' }, { 'retry-after': '60' });
     return;
   }
@@ -269,15 +273,35 @@ async function handleScores(req, res, method) {
   try {
     const { improved, entries } = await scores.submit({ name, height });
     if (improved) {
-      console.log(`[scores] ${name} — ${height.toFixed(1)}m`);
-      // Push it to everyone in the shared world, so the board on their screen
-      // moves the moment it happens instead of when they next open the menu.
-      room.announceScores(entries);
+      console.log(`[scores] ${mapId}: ${name} — ${height.toFixed(1)}m`);
+      // Push it to everyone on *this* map. A board that jumped because
+      // somebody set a record on a different map would be a lie.
+      room.announceScores(entries, mapId);
     }
-    sendJson(res, 200, { ok: true, improved, scores: entries });
+    sendJson(res, 200, { ok: true, map: mapId, improved, scores: entries });
   } catch (e) {
     console.error('[scores] save failed:', e);
     sendJson(res, 500, { error: 'save failed' });
+  }
+}
+
+/**
+ * The levels the editor's browser can load.
+ *
+ * Unauthenticated, like the levels themselves: every one of these is already
+ * readable by anyone who can guess its name, so listing them gives nothing away
+ * that /levels/<name> does not. The write side is what needs a session.
+ */
+async function handleLevelList(req, res, method) {
+  if (method !== 'GET' && method !== 'HEAD') {
+    sendJson(res, 405, { error: 'method not allowed' });
+    return;
+  }
+  try {
+    sendJson(res, 200, { levels: await listLevels([LEVELS, join(DIST, 'levels')]) });
+  } catch (e) {
+    console.error('[levels] listing failed:', e);
+    sendJson(res, 500, { error: 'listing failed' });
   }
 }
 
@@ -362,7 +386,11 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (pathname === '/api/scores') {
-      await handleScores(req, res, req.method);
+      await handleScores(req, res, req.method, url.searchParams.get('map') ?? boards.fallback);
+      return;
+    }
+    if (pathname === '/api/levels') {
+      await handleLevelList(req, res, req.method);
       return;
     }
     if (pathname.startsWith('/api/level/')) {

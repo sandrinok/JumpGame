@@ -5,10 +5,10 @@ import { join, resolve } from 'node:path';
 // The real implementation, not a copy. Two servers answering the same endpoint
 // with subtly different rules is the kind of thing you only find out about in
 // production, when a name the dev server accepted is rejected on the night.
-import { cleanHeight, cleanName, createScoreBoard } from './server/scores.mjs';
+import { cleanHeight, cleanName } from './server/scores.mjs';
+import { createBoards } from './server/boards.mjs';
 import { createRoom } from './server/multiplayer.mjs';
-
-const LEVEL_NAME = /^[a-zA-Z0-9_-]{1,64}\.json$/;
+import { LEVEL_NAME, listLevels } from './server/levels.mjs';
 
 /**
  * Dev-only stand-in for server/index.mjs.
@@ -23,7 +23,9 @@ function levelSavePlugin(): Plugin {
   const levelsDir = resolve(process.cwd(), 'public', 'levels');
   // A separate file from production's, so experimenting locally cannot put a
   // joke entry on the board everyone else is looking at.
-  const scores = createScoreBoard(resolve(process.cwd(), 'data', 'scores.dev.json'));
+  // One table per map, same as production. A dev server that pooled them would
+  // hide exactly the bug this split exists to prevent.
+  const boardsReady = createBoards(resolve(process.cwd(), 'data', 'scores.dev.json'));
   return {
     name: 'jumpgame-level-save',
     apply: 'serve',
@@ -49,7 +51,11 @@ function levelSavePlugin(): Plugin {
           res.setHeader('content-type', 'application/json');
           res.end(JSON.stringify(body));
         };
-        if (req.method === 'GET') return send(200, { scores: await scores.top() });
+        const boards = await boardsReady;
+        const url = new URL(req.url ?? '/', 'http://localhost');
+        const mapId = url.searchParams.get('map') ?? boards.fallback;
+        const scores = boards.for(mapId);
+        if (req.method === 'GET') return send(200, { map: mapId, scores: await scores.top() });
         if (req.method !== 'POST') return send(405, { error: 'method not allowed' });
 
         let raw = '';
@@ -67,8 +73,24 @@ function levelSavePlugin(): Plugin {
         // Same push as the production server does. Leaving it out here meant a
         // live scoreboard that worked in production and not in development,
         // which is the worst way round.
-        if (improved) room.announceScores(entries);
-        send(200, { ok: true, improved, scores: entries });
+        if (improved) room.announceScores(entries, mapId);
+        send(200, { ok: true, map: mapId, improved, scores: entries });
+      });
+
+      // Mounted before /api/level so the intent is visible; connect matches on
+      // a path boundary, so "/api/levels" would not fall into it regardless.
+      server.middlewares.use('/api/levels', async (req, res) => {
+        res.setHeader('content-type', 'application/json');
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'method not allowed' }));
+          return;
+        }
+        // Only public/levels here: dist/ is a build output that development
+        // never reads, and listing it would offer a level the dev server has
+        // no way to load.
+        res.statusCode = 200;
+        res.end(JSON.stringify({ levels: await listLevels([levelsDir]) }));
       });
 
       server.middlewares.use('/api/level', async (req, res) => {
@@ -105,6 +127,15 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
+    rollupOptions: {
+      // Two pages: the hub you land in, and the game a portal takes you to.
+      // Without both listed, the build emits only index.html and every portal
+      // in the deployed hub leads to a 404.
+      input: {
+        index: resolve(process.cwd(), 'index.html'),
+        play: resolve(process.cwd(), 'play.html'),
+      },
+    },
     // Off for the public build: the maps were ~5.5MB of the deploy and served
     // the full unminified source to anyone who looked. Flip to true when you
     // need to debug a production issue.

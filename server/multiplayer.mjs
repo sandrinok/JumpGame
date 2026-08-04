@@ -65,13 +65,119 @@ function cleanColour(value) {
   return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#cccccc';
 }
 
+/**
+ * A shirt colour, or the empty string for no shirt.
+ *
+ * Separate from cleanColour because "nothing" is a legitimate answer here and
+ * has to survive the round trip: falling back to grey the way cleanColour does
+ * would put a grey shirt on everyone who chose not to wear one.
+ */
+function cleanShirt(value) {
+  if (typeof value !== 'string' || value === '') return '';
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : '';
+}
+
+/** Longest chest print accepted. Past this it stops fitting on a chest. */
+const MAX_PRINT_LENGTH = 12;
+
+/**
+ * Clean the text printed across a player's shirt.
+ *
+ * Same reasoning as chat: only control characters are stripped, and only
+ * because they would break the rendering. This string reaches the client and is
+ * drawn onto a canvas with fillText — as glyphs, never as markup — so there is
+ * no escaping question for this function to answer.
+ */
+function cleanPrint(value) {
+  if (typeof value !== 'string') return '';
+  // eslint-disable-next-line no-control-regex
+  return value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, MAX_PRINT_LENGTH);
+}
+
 function finite(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 }
 
+/** Keep a number inside the range the client offers, or fall back to a default. */
+function clamped(value, lo, hi, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(hi, Math.max(lo, n));
+}
+
+/*
+ * Bounds on the shirt's shape, mirroring src/game/character/appearance.ts.
+ *
+ * Duplicated rather than imported because that module is TypeScript and pulls
+ * in three; and because these are not really the same numbers doing the same
+ * job. There they are the ends of a slider, here they are the only thing
+ * standing between a hand-written message and a client asked to cut a garment
+ * out of a body using coordinates from beyond the end of it.
+ */
+const HEM_MIN = 0.02;
+const HEM_MAX = 0.34;
+const SLEEVE_MIN = 0.26;
+const SLEEVE_MAX = 0.72;
+const PRINT_SCALE_MIN = 0.5;
+const PRINT_SCALE_MAX = 1.8;
+
+/**
+ * Ceiling on an uploaded print, in characters of data URL.
+ *
+ * The client aims well under this; the check is here because the client is not
+ * the one to trust with it. Sixteen players at this size is under 400kB of
+ * one-off transfer, and no single upload can wedge a socket.
+ */
+const MAX_LOGO_CHARS = 24_000;
+/**
+ * What a print may be. Only the two formats the uploader produces, and only
+ * base64 — a data URL is handed straight to an <img> on every other client, so
+ * this is the one place to be strict about it. Anything else becomes no print
+ * rather than an error: a malformed upload should cost the wearer their logo,
+ * not their connection.
+ */
+const LOGO_PATTERN = /^data:image\/(?:webp|png);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+function cleanLogo(value) {
+  if (typeof value !== 'string' || value === '') return '';
+  if (value.length > MAX_LOGO_CHARS) return '';
+  return LOGO_PATTERN.test(value) ? value : '';
+}
+
+/**
+ * Copy whatever a message says about who someone is onto their record.
+ *
+ * Shared by hello and state because the two carry the same fields for the same
+ * reason: hello is the introduction, state is how a change between runs gets
+ * noticed without needing a second one. Only fields actually present are
+ * touched, so a client sending a smaller message keeps what it had rather than
+ * being reset to defaults.
+ */
+/** Map ids are URL-safe by contract; anything else is treated as unset. */
+const SAFE_MAP = /^[a-z0-9][a-z0-9-]{0,40}$/;
+
+function applyIdentity(player, msg) {
+  // Which world this player is standing in. Everything below is scoped by it:
+  // two people climbing different maps share a server but not a sky, and a
+  // record set on one map must not shuffle the board being shown on another.
+  if (typeof msg.map === 'string' && SAFE_MAP.test(msg.map)) player.map = msg.map;
+  if (typeof msg.name === 'string') player.name = cleanName(msg.name);
+  if (typeof msg.colour === 'string') player.colour = cleanColour(msg.colour);
+  if (typeof msg.shirt === 'string') player.shirt = cleanShirt(msg.shirt);
+  if (msg.hem !== undefined) player.hem = clamped(msg.hem, HEM_MIN, HEM_MAX, player.hem);
+  if (msg.sleeve !== undefined) {
+    player.sleeve = clamped(msg.sleeve, SLEEVE_MIN, SLEEVE_MAX, player.sleeve);
+  }
+  if (typeof msg.print === 'string') player.print = cleanPrint(msg.print);
+  if (typeof msg.printColour === 'string') player.printColour = cleanColour(msg.printColour);
+  if (msg.printScale !== undefined) {
+    player.printScale = clamped(msg.printScale, PRINT_SCALE_MIN, PRINT_SCALE_MAX, player.printScale);
+  }
+}
+
 export function createRoom() {
-  /** @type {Map<string, {conn: object, name: string, colour: string, p: number[], yaw: number, state: string, moved: boolean}>} */
+  /** @type {Map<string, {conn: object, name: string, colour: string, shirt: string, print: string, printColour: string, p: number[], yaw: number, state: string, moved: boolean}>} */
   const players = new Map();
   let timer = null;
 
@@ -79,6 +185,12 @@ export function createRoom() {
     id,
     name: p.name,
     colour: p.colour,
+    shirt: p.shirt,
+    hem: p.hem,
+    sleeve: p.sleeve,
+    print: p.print,
+    printColour: p.printColour,
+    printScale: p.printScale,
     p: p.p.map((v) => Math.round(v * 100) / 100),
     y: Math.round(p.yaw * 100) / 100,
     a: p.state,
@@ -87,22 +199,32 @@ export function createRoom() {
     h: Math.round(p.height * 10) / 10,
   });
 
-  function broadcast(message) {
+  /** @param map when given, only players on that map receive the message. */
+  function broadcast(message, map) {
     const text = JSON.stringify(message);
-    for (const p of players.values()) p.conn.send(text);
+    for (const p of players.values()) {
+      if (map !== undefined && p.map !== map) continue;
+      p.conn.send(text);
+    }
   }
 
   function tick() {
     if (players.size === 0) return;
-    const world = [];
+    // Grouped by map. One payload per map rather than per player: everyone on a
+    // map receives everyone on it, themselves included, and filtering the
+    // recipient out would mean building a different payload each for the sake
+    // of one entry the client already ignores.
+    const byMap = new Map();
     // Someone who has connected but not yet reported a position would otherwise
     // appear standing at the world origin for a moment before teleporting to
     // wherever they actually spawned.
-    for (const [id, p] of players) if (p.moved) world.push(describe(id, p));
-    // Everyone receives everyone, themselves included. Filtering the recipient
-    // out would mean building a different payload per player for the sake of
-    // one entry the client ignores anyway.
-    broadcast({ t: 'world', players: world });
+    for (const [id, p] of players) {
+      if (!p.moved) continue;
+      let list = byMap.get(p.map);
+      if (!list) byMap.set(p.map, (list = []));
+      list.push(describe(id, p));
+    }
+    for (const [map, world] of byMap) broadcast({ t: 'world', players: world }, map);
   }
 
   function start() {
@@ -135,8 +257,23 @@ export function createRoom() {
 
       const player = {
         conn,
+        /**
+         * Which map they are on. Unset until their hello arrives, which is
+         * deliberately not the same as any real map id — a connection that has
+         * not said where it is should be visible to nobody rather than to
+         * everybody on whichever map happens to be first.
+         */
+        map: '',
         name: 'Player',
         colour: '#cccccc',
+        shirt: '',
+        hem: 0.16,
+        sleeve: 0.46,
+        print: '',
+        printColour: '#ffffff',
+        printScale: 1,
+        /** Uploaded chest print, relayed on its own rather than per tick. */
+        logo: '',
         p: [0, 0, 0],
         yaw: 0,
         state: 'idle',
@@ -151,7 +288,29 @@ export function createRoom() {
 
       conn.send(JSON.stringify({ t: 'welcome', id: conn.id, tickMs: TICK_MS }));
 
+      // Catch the newcomer up on prints already being worn. They are broadcast
+      // on change, so without this replay someone joining a room in progress
+      // would see blank shirts on everybody until they each changed theirs.
+      for (const [id, other] of players) {
+        if (id !== conn.id && other.logo) {
+          conn.send(JSON.stringify({ t: 'logo', id, image: other.logo }));
+        }
+      }
+
       conn.onMessage = (text) => {
+        // Anything thrown in here reaches a socket 'data' handler with nothing
+        // above it to catch it, so it does not fail this message — it takes the
+        // process down and every player in the room with it. The parse was
+        // already guarded; the handling below deserves the same, now that some
+        // of it works on strings a client chose.
+        try {
+          handleMessage(text);
+        } catch (err) {
+          console.error(`[room] dropped a message from ${conn.id}:`, err);
+        }
+      };
+
+      const handleMessage = (text) => {
         let msg;
         try {
           msg = JSON.parse(text);
@@ -159,8 +318,16 @@ export function createRoom() {
           return;
         }
         if (msg?.t === 'hello') {
-          player.name = cleanName(msg.name);
-          player.colour = cleanColour(msg.colour);
+          applyIdentity(player, msg);
+          return;
+        }
+        if (msg?.t === 'logo') {
+          const image = cleanLogo(msg.image);
+          if (image === player.logo) return;
+          player.logo = image;
+          // Straight out to everyone, including the sender — one message per
+          // change, never per tick.
+          broadcast({ t: 'logo', id: conn.id, image });
           return;
         }
         if (msg?.t === 'state') {
@@ -170,10 +337,10 @@ export function createRoom() {
           player.state = STATES.has(msg.a) ? msg.a : 'idle';
           player.height = finite(msg.h);
           player.moved = true;
-          // A name change mid-session — someone fixing their spelling between
-          // runs — arrives on the state message rather than a second hello.
-          if (typeof msg.name === 'string') player.name = cleanName(msg.name);
-          if (typeof msg.colour === 'string') player.colour = cleanColour(msg.colour);
+          // A change mid-session — someone fixing their spelling between runs,
+          // or picking a different shirt — rides along on the state message
+          // rather than arriving as a second hello.
+          applyIdentity(player, msg);
           return;
         }
         if (msg?.t === 'chat') {
@@ -210,9 +377,9 @@ export function createRoom() {
      * Called when a score is recorded, so every open leaderboard updates itself
      * instead of waiting for someone to reopen the menu.
      */
-    announceScores(scores) {
+    announceScores(scores, map) {
       if (players.size === 0) return;
-      broadcast({ t: 'scores', scores });
+      broadcast({ t: 'scores', map, scores }, map);
     },
 
     /** Close every connection. Used when the process is shutting down. */

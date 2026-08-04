@@ -16,6 +16,13 @@ export interface EditorActions {
   saveLevel(): void;
   saveLevelAs(): void;
   importGlbs(files: File[]): Promise<void>;
+  // level library
+  /** Re-read the server's list of levels. */
+  refreshLevels(): Promise<void>;
+  /** Load a level by filename, replacing everything currently in the world. */
+  loadLevelNamed(name: string): Promise<void>;
+  /** Write the current level to the server under `name` (no extension). */
+  saveLevelNamed(name: string): Promise<void>;
   // edit
   undo(): void;
   redo(): void;
@@ -52,6 +59,9 @@ const noop: EditorActions = {
   saveLevel: () => undefined,
   saveLevelAs: () => undefined,
   importGlbs: async () => undefined,
+  refreshLevels: async () => undefined,
+  loadLevelNamed: async () => undefined,
+  saveLevelNamed: async () => undefined,
   undo: () => undefined,
   redo: () => undefined,
   duplicateSelected: () => undefined,

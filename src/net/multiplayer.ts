@@ -1,3 +1,4 @@
+import type { Appearance } from '../game/character/appearance';
 import type { CharacterState } from '../game/character/rig';
 
 /**
@@ -13,6 +14,21 @@ export interface RemoteState {
   id: string;
   name: string;
   colour: string;
+  /** Shirt colour as #rrggbb, or '' for none. */
+  shirt: string;
+  hem: number;
+  sleeve: number;
+  /** Printed across this player's chest. */
+  print: string;
+  printColour: string;
+  printScale: number;
+  /**
+   * Filled in locally from the logo cache, not carried by the snapshot. An
+   * uploaded picture is kilobytes; putting it in a message that goes out
+   * fifteen times a second to every player would cost more bandwidth than the
+   * entire rest of the game put together.
+   */
+  printImage: string;
   /** World position of the character's feet. */
   p: [number, number, number];
   /** Facing, in radians. */
@@ -20,6 +36,20 @@ export interface RemoteState {
   a: CharacterState;
   /** Current height above the ground, in metres. */
   h: number;
+}
+
+/** Pull the wearable fields out of a snapshot, for handing to the renderer. */
+export function appearanceOfRemote(state: RemoteState): Appearance {
+  return {
+    body: state.colour,
+    shirt: state.shirt,
+    hem: state.hem,
+    sleeve: state.sleeve,
+    print: state.print,
+    printColour: state.printColour,
+    printScale: state.printScale,
+    printImage: state.printImage,
+  };
 }
 
 export interface ChatMessage {
@@ -47,7 +77,7 @@ export interface Multiplayer {
   /** Report where the local player is. Cheap to call every frame. */
   send(state: LocalState): void;
   /** Change how the local player appears to everyone else. */
-  setIdentity(name: string, colour: string): void;
+  setIdentity(name: string, appearance: Appearance): void;
   /** Called whenever the set of players changes, for the UI. */
   onRoster: ((others: RemoteState[]) => void) | null;
   /** Called for each chat message, including this player's own. */
@@ -65,14 +95,58 @@ const SEND_HZ = 15;
 const RECONNECT_MIN_MS = 1000;
 const RECONNECT_MAX_MS = 15000;
 
-export function connectMultiplayer(name: string, colour: string): Multiplayer {
+/**
+ * The wire form of who someone is: a name, plus everything they are wearing
+ * that is small enough to repeat. The uploaded print image is deliberately not
+ * here — it travels once, as its own message.
+ */
+function wireIdentity(map: string, name: string, a: Appearance) {
+  return {
+    /**
+     * Which map this player is standing in.
+     *
+     * Rides along with the identity rather than as its own message, because it
+     * is the one thing that must be true before the first state tick: the
+     * server shows a player only to others on the same map, and one that has
+     * not said where it is should be visible to nobody rather than to whoever
+     * happens to be first.
+     */
+    map,
+    name,
+    colour: a.body,
+    shirt: a.shirt,
+    // Rounded because they came off a slider and the extra digits are noise
+    // that would otherwise be paid for on every tick.
+    hem: Math.round(a.hem * 1000) / 1000,
+    sleeve: Math.round(a.sleeve * 1000) / 1000,
+    print: a.print,
+    printColour: a.printColour,
+    printScale: Math.round(a.printScale * 100) / 100,
+  };
+}
+
+export function connectMultiplayer(
+  map: string,
+  name: string,
+  appearance: Appearance,
+): Multiplayer {
   const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 
   let socket: WebSocket | null = null;
   let selfId = '';
   let others: RemoteState[] = [];
   let tickMs = 66;
-  let identity = { name, colour };
+  let identity = wireIdentity(map, name, appearance);
+  /** This player's uploaded print, sent separately from the identity above. */
+  let logo = appearance.printImage;
+  /**
+   * Everyone else's uploaded prints, by player id.
+   *
+   * Held here rather than on the snapshot because the snapshot is rebuilt from
+   * scratch fifteen times a second and these are not. A logo arrives once when
+   * its owner joins or changes it, and stays until they leave.
+   */
+  const logos = new Map<string, string>();
   let lastSent = 0;
   let retryDelay = RECONNECT_MIN_MS;
   let closed = false;
@@ -110,16 +184,21 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
           y: state.y,
           a: state.a,
           h: state.h,
-          name: identity.name,
-          colour: identity.colour,
+          ...identity,
         }),
       );
     },
-    setIdentity(nextName, nextColour) {
-      identity = { name: nextName, colour: nextColour };
-      if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ t: 'hello', ...identity }));
-      }
+    setIdentity(nextName, nextAppearance) {
+      identity = wireIdentity(map, nextName, nextAppearance);
+      const nextLogo = nextAppearance.printImage;
+      const logoChanged = nextLogo !== logo;
+      logo = nextLogo;
+      if (socket?.readyState !== WebSocket.OPEN) return;
+      socket.send(JSON.stringify({ t: 'hello', ...identity }));
+      // Only when it actually changed. Dragging a colour slider fires this
+      // handler on every frame of the drag, and re-sending a 24kB picture on
+      // each of them would be a denial of service against our own room.
+      if (logoChanged) socket.send(JSON.stringify({ t: 'logo', image: logo }));
     },
     disconnect() {
       closed = true;
@@ -144,6 +223,7 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
     ws.onopen = () => {
       retryDelay = RECONNECT_MIN_MS;
       ws.send(JSON.stringify({ t: 'hello', ...identity }));
+      if (logo) ws.send(JSON.stringify({ t: 'logo', image: logo }));
     };
 
     ws.onmessage = (event) => {
@@ -157,6 +237,7 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
         colour?: string;
         text?: string;
         at?: number;
+        image?: string;
       };
       try {
         msg = JSON.parse(String(event.data));
@@ -171,8 +252,18 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
       if (msg.t === 'world' && Array.isArray(msg.players)) {
         // The snapshot includes us; the local player is already on screen and
         // drawn from the simulation, not from a round trip through the server.
-        others = msg.players.filter((p) => p.id !== selfId);
+        others = msg.players
+          .filter((p) => p.id !== selfId)
+          // Reunited with the picture the snapshot could not afford to carry.
+          .map((p) => ({ ...p, printImage: logos.get(p.id) ?? '' }));
         api.onRoster?.(others);
+        return;
+      }
+      if (msg.t === 'logo' && typeof msg.id === 'string') {
+        if (msg.image) logos.set(msg.id, msg.image);
+        else logos.delete(msg.id);
+        // The next snapshot picks it up; there are fifteen a second, so there
+        // is nothing to gain from rebuilding the roster here.
         return;
       }
       if (msg.t === 'chat' && typeof msg.text === 'string') {
@@ -191,6 +282,9 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
       }
       if (msg.t === 'left') {
         others = others.filter((p) => p.id !== msg.id);
+        // Or the map grows for the whole session, holding a picture per person
+        // who has ever passed through.
+        if (msg.id) logos.delete(msg.id);
         api.onRoster?.(others);
         return;
       }
@@ -204,6 +298,9 @@ export function connectMultiplayer(name: string, colour: string): Multiplayer {
     ws.onclose = () => {
       socket = null;
       others = [];
+      // Ids are per connection, so nothing cached here survives a reconnect —
+      // and the server replays every logo to a client that comes back.
+      logos.clear();
       api.onRoster?.(others);
       scheduleReconnect();
     };

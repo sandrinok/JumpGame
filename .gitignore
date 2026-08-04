@@ -11,3 +11,6 @@ dist/
 .vscode/
 data/
 Nieuwe modellen/
+# A 468MB local copy of the V1 project, kept for reference. Its history is
+# already in this repo — that is what the commits before V2 are.
+Oud/

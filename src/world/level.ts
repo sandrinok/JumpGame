@@ -1,8 +1,18 @@
 import * as THREE from 'three';
+import { brokenSlabFor } from '../render/brokenSlab';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Physics } from '../physics/world';
 import type { AssetRegistry, ResolvedAsset } from './registry';
 import type { AssetColliderOverride, ColliderParams, ColliderShape, Level, Placement } from './types';
+
+/**
+ * Primitive ids whose visual is replaced with a broken-edged slab.
+ *
+ * Both the footholds and the supporting mass — a ruin made of chipped slabs
+ * held up by perfectly rectangular columns looks worse than one made entirely
+ * of boxes, because the mismatch draws attention to the columns.
+ */
+const BROKEN_SILHOUETTE = new Set(['box_stone', 'box_wood']);
 
 export interface RenderedPlacement {
   placement: Placement;
@@ -117,6 +127,10 @@ export class LevelHandle {
     r.group.position.set(p.pos[0], p.pos[1], p.pos[2]);
     r.group.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
     r.group.scale.set(p.scale[0], p.scale[1], p.scale[2]);
+    // The group no longer recomputes its own matrices, so moving it is only
+    // half the job — without this the editor's gizmo would slide across a
+    // model that stayed where it was.
+    freezeTransform(r.group);
 
     // recreate physics body to reflect new scale/pos/rot
     this.physics.world.removeRigidBody(r.body);
@@ -159,15 +173,56 @@ function build(
     if (!m.isMesh) return;
     m.castShadow = true;
     m.receiveShadow = true;
+    // Swap the box silhouette for a broken one. The collider is untouched and
+    // stays an exact cuboid; only what the player *sees* changes, and the
+    // replacement is always inset, never larger — so nothing looks solid that
+    // is not. See render/brokenSlab.ts.
+    if (BROKEN_SILHOUETTE.has(p.id)) m.geometry = brokenSlabFor(p.uid);
   });
   group.add(visual);
   group.position.set(p.pos[0], p.pos[1], p.pos[2]);
   group.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
   group.scale.set(p.scale[0], p.scale[1], p.scale[2]);
   scene.add(group);
+  // Freezing bakes the world matrix and opts the subtree out of the per-frame
+  // transform walk, which is only correct for geometry that never moves.
+  if (!p.kind || p.kind === 'crumbling' || p.kind === 'bounce') freezeTransform(group);
 
   const { body, collider } = createBody(physics, asset, p, override);
   return { placement: p, group, body, collider };
+}
+
+/**
+ * Bake a placement's world matrix and take it out of the per-frame update.
+ *
+ * Nothing placed in a level ever moves on its own, but three has no way to know
+ * that: every frame it walks the whole graph, recomposes each node's local
+ * matrix from its position, quaternion and scale, and multiplies it by its
+ * parent's. Clearing matrixAutoUpdate down the subtree reduces each of those
+ * visits to a pair of boolean tests.
+ *
+ * Two things about three r169 make this less obvious than it looks. The
+ * recursion into children is unconditional, so the walk itself remains no
+ * matter what is set here — matrixWorldAutoUpdate does not gate it, it only
+ * gates whether a node's own matrixWorld is recomputed, and clearing it here
+ * measured slightly *slower* than leaving it alone. And the whole subtree only
+ * stays skipped if `force` never arrives from above, which is why
+ * createScene leaves the Scene itself still; without that the Scene sets
+ * matrixWorldNeedsUpdate on every frame and forces the recompute back on
+ * regardless of what is set here.
+ *
+ * Worth roughly 15µs per frame on a 76-placement level and 40µs on a 256-place
+ * one — real, but small. It is here because it is free, not because it rescues
+ * a frame budget.
+ */
+function freezeTransform(group: THREE.Object3D): void {
+  group.traverse((o) => {
+    o.updateMatrix();
+    o.matrixAutoUpdate = false;
+  });
+  // Forced, because the flag just cleared is the one this would otherwise
+  // consult to decide whether there was anything to propagate.
+  group.updateMatrixWorld(true);
 }
 
 function createBody(
@@ -176,7 +231,14 @@ function createBody(
   p: Placement,
   override: AssetColliderOverride | undefined,
 ): { body: RAPIER.RigidBody; collider: RAPIER.Collider } {
-  const bodyDesc = RAPIER.RigidBodyDesc.fixed()
+  // Anything that moves has to be kinematic rather than fixed, or Rapier will
+  // happily let the player's character controller push straight through it: a
+  // fixed body that teleports does not sweep, so a platform arriving at speed
+  // passes through the capsule instead of carrying it.
+  const animated = p.kind === 'moving' || p.kind === 'rotating';
+  const bodyDesc = (animated
+    ? RAPIER.RigidBodyDesc.kinematicPositionBased()
+    : RAPIER.RigidBodyDesc.fixed())
     .setTranslation(p.pos[0], p.pos[1], p.pos[2])
     .setRotation(quatFromEuler(p.rot));
   const body = physics.world.createRigidBody(bodyDesc);

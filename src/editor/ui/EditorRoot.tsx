@@ -4,6 +4,7 @@ import { PalettePanel } from './PalettePanel';
 import { InspectorPanel } from './InspectorPanel';
 import { Topbar } from './Topbar';
 import { Outliner } from './Outliner';
+import { LevelsPanel } from './LevelsPanel';
 import { FocusBanner } from './FocusBanner';
 import { HotkeysPanel } from './HotkeysPanel';
 import { ToolBar } from './ToolBar';
@@ -24,6 +25,7 @@ export function EditorRoot({ actions }: Props): JSX.Element | null {
         <PalettePanel />
         <HotkeysPanel />
         <div className="absolute top-16 bottom-3 right-3 flex flex-col items-end gap-3 max-h-[calc(100vh-80px)]">
+          <LevelsPanel />
           <Outliner />
           <InspectorPanel />
         </div>

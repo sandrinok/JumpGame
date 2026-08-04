@@ -15,14 +15,24 @@
     "serve": "node server/index.mjs",
     "set-editor-password": "node scripts/set-editor-password.mjs",
     "typecheck": "tsc --noEmit",
+    "level": "node scripts/generate-level.mjs public/levels/ruins.json && node scripts/check-level.mjs public/levels/ruins.json && node scripts/simulate-route.mjs public/levels/ruins.json && node scripts/check-platforms.mjs public/levels/ruins.json",
+    "level:generate": "node scripts/generate-level.mjs public/levels/ruins.json",
+    "level:check": "node scripts/check-level.mjs public/levels/ruins.json",
+    "level:sim": "node scripts/simulate-route.mjs public/levels/ruins.json",
+    "level:platforms": "node scripts/check-platforms.mjs public/levels/ruins.json",
+    "gen:foliage": "node scripts/gen-foliage.mjs",
+    "gen:models": "node scripts/gen-models.mjs",
+    "gen:textures": "node scripts/gen-textures.mjs",
+    "gen:audio": "node scripts/gen-audio.mjs",
     "optimize-assets": "node scripts/optimize-assets.mjs",
     "audit-assets": "node scripts/audit-assets.mjs",
     "optimize-character": "node scripts/optimize-character.mjs",
-    "build-credits": "node scripts/build-credits.mjs"
+    "build-credits": "node scripts/build-credits.mjs",
+    "hub": "node scripts/generate-hub.mjs public/levels/hub.json"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",
-    "three": "^0.169.0"
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.1.0",
@@ -31,7 +41,7 @@
     "@radix-ui/react-menubar": "^1.1.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@types/three": "^0.169.0",
+    "@types/three": "^0.185.3",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.0",
     "class-variance-authority": "^0.7.0",

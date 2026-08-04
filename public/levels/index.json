@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "maps": [
+    {
+      "id": "ai-jungle",
+      "title": "AI Jungle",
+      "file": "ruins.json",
+      "blurb": "A flooded, overgrown ruin. Generated from the jump envelope and audited three ways, so every move on it is known to be possible.",
+      "accent": "#5fbf7f",
+      "author": "generated",
+      "available": true,
+      "env": {
+        "water": true,
+        "vegetation": true
+      },
+      "emblem": "trees_and_bush_pack_bush_big2",
+      "emblemWidth": 2.2,
+      "look": "jungle"
+    },
+    {
+      "id": "scrapheap",
+      "title": "Scrapheap",
+      "file": "dev.json",
+      "blurb": "Sushi, traffic cones, wooden chairs and desk lamps, stacked into a climb. The first one, and still the strangest.",
+      "accent": "#e0a44a",
+      "author": "hand-built",
+      "available": false,
+      "env": {
+        "water": false,
+        "vegetation": false
+      },
+      "emblem": "sushi",
+      "emblemWidth": 2.4,
+      "look": "neutral"
+    },
+    {
+      "id": "the-long-way-up",
+      "title": "The Long Way Up",
+      "file": "dev-extended.json",
+      "blurb": "Roads, cargo containers and street lamps piled two hundred and sixty metres into the air. The tallest thing here.",
+      "accent": "#6f9fd8",
+      "author": "hand-built",
+      "available": false,
+      "env": {
+        "water": false,
+        "vegetation": false
+      },
+      "emblem": "psx_industrial_pack_cargo_container",
+      "emblemWidth": 2.6,
+      "look": "neutral"
+    }
+  ]
+}

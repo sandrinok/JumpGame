@@ -5,6 +5,10 @@
  * works perfectly well without one, so a server that is down, a laptop that has
  * dropped off the wifi, or a corporate proxy eating the request should cost the
  * player nothing but an empty panel.
+ *
+ * Every call carries a map id. There is one table per map, because ranking a
+ * 260m climb up the tallest map above a 180m climb up the hardest one tells
+ * nobody anything.
  */
 
 export interface ScoreEntry {
@@ -15,6 +19,8 @@ export interface ScoreEntry {
 }
 
 const ENDPOINT = '/api/scores';
+
+const url = (map: string): string => `${ENDPOINT}?map=${encodeURIComponent(map)}`;
 /**
  * Long enough for a slow connection, short enough that the start screen is not
  * held hostage by a server that will never answer.
@@ -22,9 +28,9 @@ const ENDPOINT = '/api/scores';
 const TIMEOUT_MS = 4000;
 
 /** The current board, best first. Empty if it could not be reached. */
-export async function fetchScores(): Promise<ScoreEntry[]> {
+export async function fetchScores(map: string): Promise<ScoreEntry[]> {
   try {
-    const res = await fetch(ENDPOINT, {
+    const res = await fetch(url(map), {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: 'no-store',
     });
@@ -41,9 +47,13 @@ export async function fetchScores(): Promise<ScoreEntry[]> {
  *
  * @returns the updated board, or null if the submission did not get through.
  */
-export async function submitScore(name: string, height: number): Promise<ScoreEntry[] | null> {
+export async function submitScore(
+  map: string,
+  name: string,
+  height: number,
+): Promise<ScoreEntry[] | null> {
   try {
-    const res = await fetch(ENDPOINT, {
+    const res = await fetch(url(map), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name, height }),
@@ -65,10 +75,10 @@ export async function submitScore(name: string, height: number): Promise<ScoreEn
  * closes the tab. sendBeacon hands the request to the browser to deliver after
  * the page is gone, which is the only thing that survives that.
  */
-export function submitScoreBeacon(name: string, height: number): void {
+export function submitScoreBeacon(map: string, name: string, height: number): void {
   try {
     const blob = new Blob([JSON.stringify({ name, height })], { type: 'application/json' });
-    navigator.sendBeacon(ENDPOINT, blob);
+    navigator.sendBeacon(url(map), blob);
   } catch {
     // No beacon support, or the payload was refused. The score stays local.
   }

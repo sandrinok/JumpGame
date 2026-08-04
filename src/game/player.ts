@@ -3,6 +3,7 @@ import type { CharacterBody } from '../physics/character';
 import type { Input } from '../core/input';
 import { loadCharacterRig, pickState, setState, type CharacterRig } from './character/rig';
 import { playJump, playLand } from '../audio/sfx';
+import { addOwedCarry, type Vec3Like } from './platformCarry';
 
 const WALK_SPEED = 5;
 const RUN_SPEED = 9;
@@ -31,6 +32,8 @@ const TURN_RATE = 12;
 const AIR_ANIM_GRACE = COYOTE_TIME;
 /** Movement below this is float noise, not the controller blocking us. */
 const CONTACT_EPSILON = 1e-4;
+/** Scratch for the carry top-up, so the fixed step allocates nothing. */
+const carryOut: Vec3Like = { x: 0, y: 0, z: 0 };
 
 export interface Player {
   body: CharacterBody;
@@ -56,6 +59,15 @@ export interface Player {
   jumpTrigger: number;
   /** ticks down after a landing; while >0 the rig plays the land one-shot */
   landTimer: number;
+  /**
+   * Downward speed at the moment of the last landing, in m/s. One-shot: the
+   * presentation layer reads it and zeroes it. Zero means nothing landed since
+   * it was last read, which is why it is a magnitude and not a boolean — the
+   * consumer needs to know how hard, not just whether.
+   */
+  landImpact: number;
+  /** One-shot, same contract: a jump left the ground since this was cleared. */
+  launched: boolean;
 }
 
 export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
@@ -90,6 +102,8 @@ export function createPlayer(scene: THREE.Scene, body: CharacterBody): Player {
     jumping: false,
     jumpTrigger: 0,
     landTimer: 0,
+    landImpact: 0,
+    launched: false,
   };
 }
 
@@ -157,7 +171,18 @@ function damp(current: number, target: number, rate: number, dt: number): number
   return current + (target - current) * (1 - Math.exp(-rate * dt));
 }
 
-export function updatePlayer(player: Player, input: Input, dt: number, basisYaw: number): void {
+/**
+ * @param carry How far the platform under the player travelled this step, or
+ *   null when they are not standing on anything that moves. See the top-up
+ *   below for why this is handed to the controller rather than applied first.
+ */
+export function updatePlayer(
+  player: Player,
+  input: Input,
+  dt: number,
+  basisYaw: number,
+  carry: THREE.Vector3 | null = null,
+): void {
   const { body } = player;
 
   // Snapshot where this step starts, so render() can interpolate towards where
@@ -213,6 +238,7 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
     player.coyote = 0;
     player.jumpBuffer = 0;
     player.jumpTrigger = 0.25;
+    player.launched = true;
     playJump();
   }
   player.jumpTrigger = Math.max(0, player.jumpTrigger - dt);
@@ -231,6 +257,10 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
   };
   body.controller.computeColliderMovement(body.collider, desired);
   const corrected = body.controller.computedMovement();
+  // Whether the player is standing is decided by their own movement. Read it
+  // here, next to the call that answers it, so anything the carry below does
+  // cannot change the answer.
+  const groundedNow = body.controller.computedGrounded();
 
   // Ceiling hit: we asked to rise and the controller refused. Without dropping
   // the velocity, gravity has to burn off the whole jump before you start
@@ -241,17 +271,29 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
     player.velocity.y = 0;
   }
 
+  // Top up whatever of the platform's travel the controller did not already
+  // give us. The reasoning, and why it is not simply added to `desired` or fed
+  // back through the controller, is in platformCarry.ts — which the level's
+  // platform check imports so it rides what actually ships.
+  const applied = carry
+    ? addOwedCarry(desired, corrected, carry, carryOut)
+    : corrected;
+
   const t = body.body.translation();
   body.body.setNextKinematicTranslation({
-    x: t.x + corrected.x,
-    y: t.y + corrected.y,
-    z: t.z + corrected.z,
+    x: t.x + applied.x,
+    y: t.y + applied.y,
+    z: t.z + applied.z,
   });
   const wasGrounded = player.grounded;
-  player.grounded = body.controller.computedGrounded();
+  player.grounded = groundedNow;
   if (player.grounded) player.airTime = 0;
   else player.airTime += dt;
   if (player.grounded && !wasGrounded) {
+    // Raw downward speed, published for the presentation layer before it is
+    // normalised for the mixer. Feel needs to tell a kerb from a twenty-metre
+    // drop, and `impact` below is already clamped at 2 for the audio.
+    player.landImpact = Math.abs(player.velocity.y);
     const impact = Math.min(2, Math.abs(player.velocity.y) / 8);
     if (impact > 0.2) {
       playLand(impact);
@@ -259,7 +301,7 @@ export function updatePlayer(player: Player, input: Input, dt: number, basisYaw:
     }
   }
 
-  player.currPos.set(t.x + corrected.x, t.y + corrected.y, t.z + corrected.z);
+  player.currPos.set(t.x + applied.x, t.y + applied.y, t.z + applied.z);
 
   if (player.rig) {
     const horizSpeed = Math.hypot(player.velocity.x, player.velocity.z);

@@ -6,8 +6,8 @@ import {
   type CharacterRig,
   type CharacterSource,
 } from './character/rig';
-import type { RemoteState } from '../net/multiplayer';
-import { createTinter, type Tinter } from './character/tint';
+import { appearanceOfRemote, type RemoteState } from '../net/multiplayer';
+import { createAppearance, type ApplyAppearance } from './character/appearance';
 
 /**
  * Everyone else, drawn in the local scene.
@@ -42,9 +42,8 @@ interface Avatar {
   /** What the name plate currently reads, so it is only redrawn on a change. */
   labelText: string;
   labelColour: string;
-  colour: string;
-  /** Applies this avatar's colour to its own copy of the materials. */
-  tint: Tinter;
+  /** Applies this avatar's own colours to its private copy of the materials. */
+  dress: ApplyAppearance;
   /** Where the avatar is drawn now, and where the last snapshot put it. */
   current: THREE.Vector3;
   target: THREE.Vector3;
@@ -117,15 +116,14 @@ export async function createRemotePlayers(
       labelTexture,
       labelText: state.name,
       labelColour: state.colour,
-      colour: '',
-      tint: () => undefined,
+      dress: () => undefined,
       current: new THREE.Vector3(...state.p),
       target: new THREE.Vector3(...state.p),
       currentYaw: state.y,
       targetYaw: state.y,
     };
-    avatar.tint = createTinter(avatar.group);
-    avatar.tint(state.colour);
+    avatar.dress = createAppearance(avatar.group);
+    avatar.dress(appearanceOfRemote(state));
     group.position.copy(avatar.current);
     group.rotation.y = state.y;
     return avatar;
@@ -175,7 +173,9 @@ export async function createRemotePlayers(
           avatar.labelText = state.name;
           avatar.labelColour = state.colour;
         }
-        avatar.tint(state.colour);
+        // Cheap to call every snapshot: the applier compares against what it
+        // last put on and returns immediately when nothing has changed.
+        avatar.dress(appearanceOfRemote(state));
         setState(avatar.rig, state.a);
       }
 

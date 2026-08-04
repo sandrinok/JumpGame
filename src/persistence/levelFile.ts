@@ -27,7 +27,7 @@ export function serializeLevel(level: Level): string {
   return JSON.stringify(level, null, 2);
 }
 
-type SaveOutcome = 'saved' | 'unauthorized' | 'unavailable';
+export type SaveOutcome = 'saved' | 'unauthorized' | 'unavailable';
 
 /** "levels/dev.json" -> "dev.json"; the server owns the directory, not the client. */
 function levelFileName(source: string): string {
@@ -56,7 +56,44 @@ async function trySaveToServer(source: string, text: string): Promise<SaveOutcom
   }
 }
 
-export async function saveLevel(level: Level): Promise<void> {
+/**
+ * Save to the server, asking for the password again if the session has lapsed.
+ *
+ * Sessions expire after 12h, and losing an afternoon of level edits to that
+ * would be miserable — ask again and retry rather than fall through to a
+ * surprise download.
+ */
+async function saveToServer(source: string, text: string): Promise<SaveOutcome> {
+  const outcome = await trySaveToServer(source, text);
+  if (outcome !== 'unauthorized') return outcome;
+  const { promptLogin } = await import('../editor/auth');
+  const host = document.getElementById('app') ?? document.body;
+  if (!(await promptLogin(host))) return 'unauthorized';
+  return await trySaveToServer(source, text);
+}
+
+/**
+ * Write the level to the server under a name of your choosing, and make that
+ * the file subsequent saves go to.
+ *
+ * This is the only way to get a level the editor is holding — one opened from
+ * disk, or built from nothing — into the server's library, where the level
+ * browser can find it again.
+ */
+export async function saveLevelAsName(name: string, level: Level): Promise<SaveOutcome> {
+  const outcome = await saveToServer(name, serializeLevel(level));
+  if (outcome === 'saved') setLevelSource(`levels/${name}`);
+  return outcome;
+}
+
+/**
+ * Save the level wherever it came from.
+ *
+ * Returns whether it was actually written anywhere — false only when the file
+ * picker was dismissed. The editor uses that to decide whether it still has
+ * unsaved work, so a cancelled Save must not read as a successful one.
+ */
+export async function saveLevel(level: Level): Promise<boolean> {
   const w = window as unknown as FSWindow;
   const text = serializeLevel(level);
 
@@ -64,16 +101,7 @@ export async function saveLevel(level: Level): Promise<void> {
   // Dev does it through the Vite middleware, production through the
   // authenticated endpoint; the client cannot tell the difference.
   if (levelSource) {
-    let outcome = await trySaveToServer(levelSource, text);
-    if (outcome === 'unauthorized') {
-      // Sessions expire after 12h, and losing an afternoon of level edits to
-      // that would be miserable — ask again and retry rather than fall through
-      // to a surprise download.
-      const { promptLogin } = await import('../editor/auth');
-      const host = document.getElementById('app') ?? document.body;
-      if (await promptLogin(host)) outcome = await trySaveToServer(levelSource, text);
-    }
-    if (outcome === 'saved') return;
+    if ((await saveToServer(levelSource, text)) === 'saved') return true;
   }
 
   if (w.showSaveFilePicker) {
@@ -83,9 +111,9 @@ export async function saveLevel(level: Level): Promise<void> {
       const writable = await handle.createWritable();
       await writable.write(text);
       await writable.close();
-      return;
+      return true;
     } catch (e) {
-      if ((e as DOMException).name === 'AbortError') return;
+      if ((e as DOMException).name === 'AbortError') return false;
       console.warn('[level] FS Access save failed, falling back to download:', e);
     }
   }
@@ -97,11 +125,12 @@ export async function saveLevel(level: Level): Promise<void> {
   a.download = 'level.json';
   a.click();
   URL.revokeObjectURL(url);
+  return true;
 }
 
-export async function saveLevelAs(level: Level): Promise<void> {
+export async function saveLevelAs(level: Level): Promise<boolean> {
   lastHandle = null;
-  await saveLevel(level);
+  return await saveLevel(level);
 }
 
 export async function loadLevelFromDisk(): Promise<Level | null> {

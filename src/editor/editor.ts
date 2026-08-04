@@ -1,8 +1,16 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { LevelHandle, RenderedPlacement } from '../world/level';
-import type { Placement, Vec3 } from '../world/types';
-import { loadLevelFromDisk, saveLevel, saveLevelAs } from '../persistence/levelFile';
+import type { Level, Placement, Vec3 } from '../world/types';
+import {
+  getLevelSource,
+  loadLevelFromDisk,
+  saveLevel,
+  saveLevelAs,
+  saveLevelAsName,
+  setLevelSource,
+} from '../persistence/levelFile';
+import { fetchLevel, listLevels } from '../persistence/levelLibrary';
 import type { AssetRegistry } from '../world/registry';
 import { History } from './history';
 import { EditorCameraController, type ViewName } from './cameraController';
@@ -50,8 +58,13 @@ export class Editor {
   private history = new History();
   private debugAccum = 0;
   private lastPointer: { x: number; y: number } | null = null;
-  /** The scene's own fog, kept so play mode gets it back after editing. */
-  private readonly playFog: THREE.Scene['fog'];
+  /**
+   * The scene's own fog density, kept so play mode gets it back after editing.
+   *
+   * The *density*, not the fog object — see setFog for why that distinction is
+   * the whole fix.
+   */
+  private readonly playFogDensity: number;
   private snapEnabled = true;
   /** snapshot of placement transform when a gizmo drag begins */
   private dragStart: { uid: string; pos: Vec3; rot: Vec3; scale: Vec3 } | null = null;
@@ -61,6 +74,15 @@ export class Editor {
 
   physicsDebug: PhysicsDebugView | null = null;
   onModeChange: ((mode: EditorMode) => void) | null = null;
+  /**
+   * Called after the whole level has been swapped out.
+   *
+   * The player's body is not part of the level, so nothing else moves it when
+   * the ground it was standing on stops existing — main.ts uses this to put it
+   * back on the new level's spawn instead of leaving it inside the new geometry
+   * or falling through where the old level used to be.
+   */
+  onLevelReplaced: (() => void) | null = null;
 
   constructor(
     private renderer: THREE.WebGLRenderer,
@@ -70,7 +92,7 @@ export class Editor {
     private registry: AssetRegistry,
     private input: Input,
   ) {
-    this.playFog = scene.fog;
+    this.playFogDensity = scene.fog instanceof THREE.FogExp2 ? scene.fog.density : 0;
 
     this.editorCamera = new THREE.PerspectiveCamera(60, gameCamera.aspect, 0.1, 1000);
     this.editorCamera.position.set(15, 15, 15);
@@ -100,8 +122,18 @@ export class Editor {
     scene.add(this.gizmoHelper);
     this.gizmoHelper.visible = false;
 
+    // Any recorded change counts as unsaved work, including an undo — see the
+    // note on EditorUiState.dirty.
+    this.history.onChange = () => {
+      if (!uiStore.get().dirty) uiStore.set({ dirty: true });
+    };
+
     this.refreshAssets();
     this.publishPlacements();
+    // The level the game booted with, so the browser can show which one is open.
+    const source = getLevelSource();
+    uiStore.set({ currentLevel: source ? (source.split('/').pop() ?? null) : null });
+    void this.refreshLevels();
 
     window.addEventListener('keydown', (e) => this.onKeyDown(e));
     renderer.domElement.addEventListener('pointerdown', (e) => this.onPointerDown(e));
@@ -163,14 +195,18 @@ export class Editor {
     if (mode === 'play') {
       this.deselect();
       this.flyCam.release();
-      this.scene.fog = this.playFog;
+      // The scene's own fog comes back regardless of how the editor's toggle
+      // was left. Restoring the *toggle* instead is how the game ended up
+      // running with no fog at all after an editing session — the last thing
+      // the editor did was switch it off for its own convenience.
+      this.applyFog(true);
       if (document.pointerLockElement) document.exitPointerLock();
     } else {
       if (document.pointerLockElement) document.exitPointerLock();
       this.editorCamera.position.copy(this.gameCamera.position);
       this.editorCamera.quaternion.copy(this.gameCamera.quaternion);
       this.flyCam.syncFromCamera();
-      this.setFog(uiStore.get().fogEnabled);
+      this.applyFog(uiStore.get().fogEnabled);
     }
   }
 
@@ -225,6 +261,17 @@ export class Editor {
     // otherwise also fire them — typing "box" in the outliner filter used to
     // place an asset ('b') and delete the selection ('x').
     if (isTextEntry(e.target)) return;
+    /*
+     * Auto-repeat is not a second press.
+     *
+     * Every shortcut here is a *toggle* or a one-shot action, and holding a key
+     * for the half-second before the OS starts repeating turned one press into
+     * a dozen: F flickered the fog and settled on whichever state the last
+     * repeat left, C ran the collider view through several modes, and X fired
+     * delete again on whatever the selection had become. None of them wants a
+     * held key to mean anything at all.
+     */
+    if (e.repeat) return;
 
     const ctrl = e.ctrlKey || e.metaKey;
 
@@ -246,8 +293,10 @@ export class Editor {
     }
     if (ctrl && e.code === 'KeyS') {
       e.preventDefault();
-      if (e.shiftKey) saveLevelAs(this.levelHandle.level);
-      else saveLevel(this.levelHandle.level);
+      // Through the methods, not the module functions: those also clear the
+      // unsaved marker and refresh the level list.
+      if (e.shiftKey) this.saveLevelAs();
+      else this.saveLevel();
       return;
     }
     if (ctrl && e.code === 'KeyO') {
@@ -548,6 +597,9 @@ export class Editor {
       saveLevel: () => this.saveLevel(),
       saveLevelAs: () => this.saveLevelAs(),
       importGlbs: (files) => this.importGlbFiles(files),
+      refreshLevels: () => this.refreshLevels(),
+      loadLevelNamed: (name) => this.loadLevelNamed(name),
+      saveLevelNamed: (name) => this.saveLevelNamed(name),
       undo: () => this.undo(),
       redo: () => this.redo(),
       duplicateSelected: () => this.duplicateSelected(),
@@ -664,8 +716,32 @@ export class Editor {
    * things in it, so it starts off and is restored on the way back to play.
    */
   setFog(enabled: boolean): void {
-    this.scene.fog = enabled ? this.playFog : null;
+    this.applyFog(enabled);
     uiStore.set({ fogEnabled: enabled });
+  }
+
+  /**
+   * Turn the fog up or down without touching the editor's own toggle state.
+   *
+   * **Density, not `scene.fog = null`.** Assigning or clearing the scene's fog
+   * changes what every shader in the scene has to compile: three compares
+   * `materialProperties.fog` against `scene.fog` on every draw and rebuilds the
+   * program for each material that disagrees. On the jungle that is several
+   * hundred programs, so the toggle bought a fraction of a millisecond of fog
+   * arithmetic in exchange for a multi-hundred-millisecond compile stall —
+   * which is what the "F stutters" report was. Worse, the stall is long enough
+   * to cross the keyboard's auto-repeat threshold, so the key that caused it
+   * fired again on the way out and the fog landed on whichever state the last
+   * repeat left it in. Hence the `e.repeat` guard on the hotkeys as well.
+   *
+   * Moving the density instead changes one uniform. Nothing recompiles, the
+   * toggle is instant, and the fog object stays attached to the scene for its
+   * whole life — so there is no state to restore and nothing to lose.
+   */
+  private applyFog(enabled: boolean): void {
+    if (this.scene.fog instanceof THREE.FogExp2) {
+      this.scene.fog.density = enabled ? this.playFogDensity : 0;
+    }
   }
 
   private async onDrop(e: DragEvent): Promise<void> {
@@ -710,26 +786,115 @@ export class Editor {
   async openLevel(): Promise<void> {
     const level = await loadLevelFromDisk();
     if (!level) return;
-    this.deselect();
-    this.history.clear();
-    this.levelHandle.replace(level);
-    this.publishPlacements();
+    // loadLevelFromDisk already cleared the source: this level came from the
+    // filesystem and has no name on the server until it is saved as one.
+    this.applyLevel(level, null);
   }
 
   saveLevel(): void {
-    void saveLevel(this.levelHandle.level);
+    void saveLevel(this.levelHandle.level).then((written) => {
+      if (written) uiStore.set({ dirty: false });
+      void this.refreshLevels();
+    });
   }
 
   saveLevelAs(): void {
-    void saveLevelAs(this.levelHandle.level);
+    void saveLevelAs(this.levelHandle.level).then((written) => {
+      if (written) uiStore.set({ dirty: false });
+      void this.refreshLevels();
+    });
   }
 
   /** Wipe the level, keeping spawn/killY but dropping all placements. */
   newLevel(): void {
+    this.exitColliderFocus();
     this.deselect();
     this.history.clear();
     this.levelHandle.clear();
+    // The hidden/locked sets are keyed by uid, and every uid just went away.
+    uiStore.set({ hidden: new Set(), locked: new Set(), dirty: true });
     this.publishPlacements();
+  }
+
+  /** Re-read the server's level list into the browser. */
+  async refreshLevels(): Promise<void> {
+    uiStore.set({ levelsLoading: true });
+    try {
+      uiStore.set({ levels: await listLevels(), levelsError: null });
+    } catch (e) {
+      console.warn('[levels] listing failed:', e);
+      uiStore.set({ levelsError: 'Could not reach the server' });
+    } finally {
+      uiStore.set({ levelsLoading: false });
+    }
+  }
+
+  /**
+   * Load a level from the server by filename, replacing what is loaded now.
+   *
+   * Nothing of the previous level survives this: its placements, bodies,
+   * selection, undo history, hidden/locked marks and collider focus all belong
+   * to objects that no longer exist. The caller is responsible for having asked
+   * about unsaved work first — by the time this runs it is gone.
+   */
+  async loadLevelNamed(name: string): Promise<void> {
+    uiStore.set({ levelsLoading: true, levelsError: null });
+    try {
+      const level = await fetchLevel(name);
+      // Assets are downloaded on demand, and this level may well use ones the
+      // previous did not. Without this its placements are kept but invisible —
+      // the level would look half-loaded for no stated reason.
+      await this.registry.resolveIds(level.placements.map((p) => p.id));
+      this.applyLevel(level, name);
+    } catch (e) {
+      console.warn(`[levels] could not load ${name}:`, e);
+      uiStore.set({ levelsError: `Could not load ${name}` });
+    } finally {
+      uiStore.set({ levelsLoading: false });
+    }
+  }
+
+  /** Save the current level to the server under `name` ("tower" -> tower.json). */
+  async saveLevelNamed(name: string): Promise<void> {
+    const file = `${name}.json`;
+    uiStore.set({ levelsLoading: true, levelsError: null });
+    try {
+      const outcome = await saveLevelAsName(file, this.levelHandle.level);
+      if (outcome !== 'saved') {
+        uiStore.set({
+          levelsError:
+            outcome === 'unauthorized' ? 'Not logged in' : `Could not save ${file}`,
+        });
+        return;
+      }
+      // saveLevelAsName repointed the source, so Ctrl+S now goes here too.
+      uiStore.set({ currentLevel: file, dirty: false });
+      await this.refreshLevels();
+    } finally {
+      uiStore.set({ levelsLoading: false });
+    }
+  }
+
+  /**
+   * Swap the entire level over, and reset everything that described the old one.
+   *
+   * `name` is the file it came from, or null for a level loaded off disk, which
+   * has no server name until it is saved under one.
+   */
+  private applyLevel(level: Level, name: string | null): void {
+    this.exitColliderFocus();
+    this.deselect();
+    this.history.clear();
+    this.levelHandle.replace(level);
+    setLevelSource(name ? `levels/${name}` : null);
+    uiStore.set({
+      hidden: new Set(),
+      locked: new Set(),
+      currentLevel: name,
+      dirty: false,
+    });
+    this.publishPlacements();
+    this.onLevelReplaced?.();
   }
 
   /** Select a placement by uid (called from outliner). Locked items still select. */

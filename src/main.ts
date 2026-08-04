@@ -1,7 +1,9 @@
+import * as THREE from 'three';
 import { createCamera, createRenderer, handleResize } from './render/renderer';
 import { createGround, createScene, focusShadow } from './render/scene';
-import { createPostFx } from './render/postFx';
+import { createPostFx, JUNGLE_GRADE, NEUTRAL_GRADE } from './render/postFx';
 import { detectTier, qualityFor } from './render/quality';
+import { effectIsOn, storedEffects } from './render/effects';
 import { FollowCamera } from './render/followCamera';
 import { startLoop } from './core/loop';
 import { Input, isTypingTarget } from './core/input';
@@ -15,22 +17,36 @@ import {
   updatePlayer,
 } from './game/player';
 import { AssetRegistry } from './world/registry';
+import { createVegetation, VEGETATION_IDS } from './world/vegetation';
+import { createDynamics } from './world/dynamics';
+import { createWater } from './render/water';
+import { createFeel } from './game/feel';
+import { createParticles } from './render/particles';
+import { setRuinScale } from './render/ruinMaterial';
 import { instantiate, loadLevel } from './world/level';
 import { createHud } from './ui/hud';
-import { loadScore, saveScore } from './persistence/score';
+import { appearanceOf, bestOn, loadScore, saveScore } from './persistence/score';
 import { submitScore, submitScoreBeacon } from './persistence/leaderboard';
 import { connectMultiplayer } from './net/multiplayer';
 import { createRemotePlayers, type RemotePlayers } from './game/remotePlayers';
-import { createTinter, type Tinter } from './game/character/tint';
+import { createAppearance, type ApplyAppearance } from './game/character/appearance';
 import { setLevelSource } from './persistence/levelFile';
 import { createStartScreen } from './ui/startScreen';
 import { createCreditsScreen } from './ui/creditsScreen';
-import { playWindBurst, unlockAudio } from './audio/sfx';
+import { createSettingsScreen } from './ui/settingsScreen';
+import {
+  playBounce,
+  playWindBurst,
+  setAmbienceActive,
+  unlockAudio,
+  updateFootsteps,
+} from './audio/sfx';
 import { createDebugHud } from './ui/debugHud';
 import { createOnlinePanel } from './ui/onlinePanel';
 import { createChat } from './ui/chat';
 import { createGpuTimer } from './render/gpuTimer';
 import { installDevHandles } from './render/bench';
+import { arrivedThroughPortal, findMap, loadMaps, selectedMapId } from './world/maps';
 
 type EditorMode = 'play' | 'edit';
 
@@ -51,12 +67,15 @@ const container: HTMLElement = appEl;
 
 // Settled once, before anything allocates a framebuffer: shadow map size and
 // multisampling are baked into GPU resources that are expensive to swap out.
+// The player's individual effect switches are folded in here rather than
+// applied afterwards, so anything they turned off is never built at all.
 const quality = qualityFor(detectTier());
 
 const renderer = createRenderer(container, quality);
 const camera = createCamera(container);
-const { scene, sun, updateSky } = createScene(renderer, quality);
-createGround(scene);
+const { scene, sun, sunDirection, updateSky } = createScene(renderer, quality);
+// Ground is shaped around the waterline, so it needs to know where that is.
+const WATER_Y = 1.05;
 const postFx = createPostFx(renderer, scene, camera, quality);
 
 const input = new Input(renderer.domElement);
@@ -65,15 +84,75 @@ const followCam = new FollowCamera(camera);
 const physics = await initPhysics();
 const groundCollider = addStaticGround(physics);
 
-const registry = new AssetRegistry();
+// Which map this page is playing. The hub sets ?map= on the way in; opening the
+// game directly falls back to the first map in the index.
+const maps = await loadMaps();
+const currentMap = findMap(maps, selectedMapId(maps));
+// Only the jungle gets its library aged into a mossy ruin. Everywhere else the
+// props keep the colours they were authored with.
+const registry = new AssetRegistry({ weather: currentMap.look === 'jungle' });
 await registry.loadManifest('/assets/manifest.json');
-const LEVEL_PATH = '/levels/dev.json';
+const LEVEL_PATH = `/levels/${currentMap.file}`;
+// Built once the map is known: the terrain is carved around this map's
+// waterline, and a map with no flood wants it flat.
+createGround(scene, currentMap.env.water ? WATER_Y : null, quality.anisotropy);
+// The look is the map's, not the game's. Left on the jungle grade every map
+// came out with the same cold cast over everything in it.
+postFx.setGrade(currentMap.look === 'jungle' ? JUNGLE_GRADE : NEUTRAL_GRADE);
+
+if (!currentMap.env.vegetation) {
+  /*
+   * Thinner, neutral air for the bare maps.
+   *
+   * The jungle's fog is green and dense on purpose: foliage closes the distance
+   * and the haze only has to separate the layers. With no foliage there is
+   * nothing to separate, so the same density simply drains the colour out of
+   * everything inside forty metres — which on a map made of traffic cones and
+   * cargo containers is the entire thing you came to look at.
+   */
+  scene.fog = new THREE.FogExp2(0x9fb0c4, 0.0022);
+}
 const level = await loadLevel(LEVEL_PATH);
 setLevelSource(LEVEL_PATH);
 // Only what this level actually places. The rest of the library is downloaded
 // when the editor opens, so a player never waits on assets they cannot see.
-await registry.resolveIds(level.placements.map((p) => p.id));
+await registry.resolveIds([
+  ...level.placements.map((p) => p.id),
+  // The rubble models, and only if this tier is going to scatter any. On low
+  // that is fourteen models nobody downloads rather than fourteen downloaded
+  // and then not placed — the tier decides what exists, and a download for
+  // something that will not exist is the most expensive kind of nothing.
+  ...(currentMap.env.vegetation && quality.debris ? VEGETATION_IDS : []),
+]);
 const levelHandle = instantiate(scene, physics, registry, level);
+// Purely visual and deliberately collider-free: the jungle is dressing, and
+// nothing the player can walk into. Placement keeps it clear of every landable
+// face, so it never lies about where the floor is.
+const vegetation = currentMap.env.vegetation
+  ? createVegetation(scene, registry, level, quality)
+  : null;
+// Sat just under the kill plane, so the surface the player must not touch is
+// the surface they can see. killY is compared against the capsule centre, which
+// sits a body-radius above the feet.
+const water = currentMap.env.water ? createWater(scene, WATER_Y) : null;
+const feel = createFeel(camera.fov);
+const particles = createParticles(scene, quality.motes);
+let windClock = 0;
+const feet = new THREE.Vector3();
+const carryDelta = new THREE.Vector3();
+
+/**
+ * Point the camera the way the level says the player is facing.
+ *
+ * FollowCamera keeps its own yaw and started at 0 regardless of the spawn, so
+ * the player faced one way and the camera looked another — you began every run
+ * looking at the back of the climb. The camera sits *behind* the player and
+ * looks back at them, so its yaw is the player's plus half a turn.
+ */
+function faceSpawn(): void {
+  followCam.yaw = levelHandle.level.spawn.yaw + Math.PI;
+  followCam.pitch = -0.22;
+}
 
 const character = createCharacter(physics, {
   x: levelHandle.level.spawn.pos[0],
@@ -81,23 +160,28 @@ const character = createCharacter(physics, {
   z: levelHandle.level.spawn.pos[2],
 });
 const player = createPlayer(scene, character);
+// Moving platforms, crumbling ledges, bounce pads and rotators. Built after the
+// character because its ground ray has to know which collider is the player's
+// own — the ray starts inside the capsule and would otherwise only ever find
+// that.
+const dynamics = createDynamics(physics, levelHandle, character.collider);
 const CHARACTER_MODEL = '/assets/character/player.glb';
 const CHARACTER_ANIMATIONS = '/assets/character/animations.glb';
 const hud = createHud(container);
 const score = loadScore();
-hud.setBest(score.name, score.best);
+hud.setBest(score.name, bestOn(score, currentMap.id));
 
-/** Applies the local player's chosen colour to their own character. */
-let tintSelf: Tinter | null = null;
+/** Puts the local player's own colours and shirt on their own character. */
+let dressSelf: ApplyAppearance | null = null;
 attachCharacterRig(player, CHARACTER_MODEL, {
   animationsUrl: CHARACTER_ANIMATIONS,
 })
   .then(() => {
     if (!player.rig) return;
-    // Seeing yourself in the colour everyone else sees you in. Without this the
+    // Seeing yourself as everyone else sees you. Without this the whole
     // choice is invisible to the one person making it.
-    tintSelf = createTinter(player.rig.root);
-    tintSelf(score.colour);
+    dressSelf = createAppearance(player.rig.root);
+    dressSelf(appearanceOf(score));
   })
   .catch((e) => {
     console.warn('Character rig failed to load, using debug capsule:', e);
@@ -131,7 +215,7 @@ let hasLanded = false;
  * background, remote avatars only appear once the character model has loaded,
  * and nothing here can stop the game running on its own.
  */
-const net = connectMultiplayer(score.name, score.colour);
+const net = connectMultiplayer(currentMap.id, score.name, appearanceOf(score));
 let remotePlayers: RemotePlayers | null = null;
 createRemotePlayers(
   scene,
@@ -201,6 +285,15 @@ async function loadEditor(): Promise<EditorApi> {
   const dbg = new PhysicsDebugView(scene, physics);
   dbg.exclude(groundCollider);
   e.physicsDebug = dbg;
+  // Loading another level deletes the ground the player is standing on. Put
+  // them on the new spawn, and reset the run with them: the height climbed in
+  // a level that no longer exists is not a score in this one.
+  e.onLevelReplaced = () => {
+    respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
+    faceSpawn();
+    runMaxHeight = 0;
+    hasLanded = false;
+  };
   e.onModeChange = (mode) => {
     currentMode = mode;
     input.lockOnClick = running && mode === 'play';
@@ -250,22 +343,61 @@ window.addEventListener('keydown', (e) => {
 });
 
 const creditsScreen = createCreditsScreen(container);
-const startScreen = createStartScreen(container, score);
+/*
+ * The effect switches, routed to whatever owns each one.
+ *
+ * Each returns whether it could be honoured from here. Turning something *off*
+ * always can be — a pass that exists can be skipped, a mesh that exists can be
+ * hidden. Turning something *on* only can be if this tier built it in the first
+ * place, and the panel offers a reload for the rest rather than flipping a
+ * switch that does nothing.
+ */
+const settingsScreen = createSettingsScreen(container, quality.tier, {
+  set(key, on) {
+    switch (key) {
+      case 'bloom':
+      case 'godRays':
+      case 'aberration':
+        return postFx.setEffect(key, on);
+      case 'motes':
+        return particles.setMotesVisible(on);
+      case 'speedFov':
+        // Costs nothing and is always built, so it always takes.
+        feel.setEnabled(on);
+        return true;
+    }
+  },
+});
+// Whatever was chosen last session, applied before the first frame. The tier
+// resolution already accounts for the rest; this one is not a tier setting.
+feel.setEnabled(effectIsOn('speedFov', quality, storedEffects()));
+const startScreen = createStartScreen(container, score, currentMap);
 startScreen.onCredits = () => creditsScreen.open();
-startScreen.onIdentityChange = (name, colour) => {
-  net.setIdentity(name, colour);
-  tintSelf?.(colour);
+startScreen.onSettings = () => settingsScreen.open();
+startScreen.onIdentityChange = () => {
+  // The start screen writes straight into `score` and saves it, so both the
+  // wire and the local character read from the same place rather than from
+  // arguments that could drift apart.
+  net.setIdentity(score.name, appearanceOf(score));
+  dressSelf?.(appearanceOf(score));
 };
 startScreen.onPlay = () => {
   running = true;
   unlockAudio();
+  setAmbienceActive(true);
   input.lockOnClick = currentMode === 'play';
-  hud.setBest(score.name, score.best);
+  hud.setBest(score.name, bestOn(score, currentMap.id));
   respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
+  faceSpawn();
   runMaxHeight = 0;
   hasLanded = false;
 };
 input.lockOnClick = false;
+
+// Walking into a hub portal is already the decision to play; putting a menu in
+// front of them afterwards asks the same question twice. Placed after onPlay is
+// assigned, because this runs it.
+if (arrivedThroughPortal()) startScreen.startImmediately();
 
 /**
  * Longest a new personal best may go unrecorded while a run continues.
@@ -280,7 +412,7 @@ let lastBestSubmit = 0;
 
 /** Record the run so far if it has improved and enough time has passed. */
 function trackBest(): void {
-  if (runMaxHeight <= score.best) return;
+  if (runMaxHeight <= bestOn(score, currentMap.id)) return;
   const now = performance.now();
   if (now - lastBestSubmit < BEST_SUBMIT_INTERVAL_MS) return;
   lastBestSubmit = now;
@@ -303,6 +435,7 @@ function leaveRun(): void {
   runMaxHeight = 0;
   hasLanded = false;
   running = false;
+  setAmbienceActive(false);
   input.lockOnClick = false;
   if (document.pointerLockElement) document.exitPointerLock();
   startScreen.show();
@@ -342,17 +475,17 @@ window.addEventListener('resize', () => {
  *                is sent — an ordinary fetch would be cancelled by the unload.
  */
 function commitRun(leaving = false): void {
-  if (runMaxHeight <= score.best) return;
-  score.best = runMaxHeight;
+  if (runMaxHeight <= bestOn(score, currentMap.id)) return;
+  score.bests[currentMap.id] = runMaxHeight;
   saveScore(score);
-  hud.setBest(score.name, score.best);
+  hud.setBest(score.name, bestOn(score, currentMap.id));
 
   // The shared board is decoration; a failure here must not disturb the run.
   if (leaving) {
-    submitScoreBeacon(score.name, score.best);
+    submitScoreBeacon(currentMap.id, score.name, runMaxHeight);
     return;
   }
-  void submitScore(score.name, score.best).then((scores) => {
+  void submitScore(currentMap.id, score.name, runMaxHeight).then((scores) => {
     if (scores) startScreen.setScores(scores);
   });
 }
@@ -366,13 +499,71 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') commitRun(true);
 });
 
+/**
+ * Drop the player onto the route at a given height.
+ *
+ * Verifying a 183m climb by playing it from the bottom every time is not
+ * verification, it is endurance. This finds the foothold whose top surface is
+ * nearest the requested height and stands the player on it, so any jump in the
+ * level can be reached in one command.
+ *
+ * Deliberately snaps to a real foothold rather than teleporting to raw
+ * coordinates: dropped at an arbitrary point the player just falls, which tells
+ * you nothing about the jump you wanted to look at.
+ */
+function warpTo(height: number): { y: number; from: string } | null {
+  let best: { p: (typeof levelHandle.level.placements)[number]; top: number } | null = null;
+  for (const p of levelHandle.level.placements) {
+    if (p.id !== 'box_stone') continue;
+    const top = p.pos[1] + p.scale[1] / 2;
+    if (!best || Math.abs(top - height) < Math.abs(best.top - height)) best = { p, top };
+  }
+  if (!best) return null;
+  respawnPlayer(
+    player,
+    [best.p.pos[0], best.top + FEET_OFFSET + 0.6, best.p.pos[2]],
+    levelHandle.level.spawn.yaw,
+  );
+  // The run is a scoring concept; warping is not a run. Reset it so a warp to
+  // 150m does not post a 150m score nobody climbed.
+  runMaxHeight = 0;
+  hasLanded = false;
+  return { y: best.top, from: best.p.uid };
+}
+
+/**
+ * Warp shortcuts, so a jump at 140m can be looked at without climbing to it.
+ *
+ * PageUp / PageDown step through the climb; Home returns to the bottom. Held
+ * Shift makes the step large, because stepping 20m at a time through 183m is
+ * still nine presses.
+ */
+if (import.meta.env.DEV) {
+  window.addEventListener('keydown', (e) => {
+    if (isTypingTarget(e) || currentMode !== 'play') return;
+    const big = e.shiftKey ? 3 : 1;
+    let target: number | null = null;
+    const here = player.currPos.y - FEET_OFFSET;
+    if (e.code === 'PageUp') target = here + 15 * big;
+    else if (e.code === 'PageDown') target = Math.max(0, here - 15 * big);
+    else if (e.code === 'Home') target = 0;
+    if (target === null) return;
+    e.preventDefault();
+    const landed = warpTo(target);
+    if (landed) hud.flashRespawn();
+  });
+}
+
 installDevHandles({
   renderer,
   scene,
   postFx,
+  warp: warpTo,
+  ruinScale: setRuinScale,
   camera: () => editor?.activeCamera ?? camera,
   level: levelHandle,
   registry,
+  dynamics,
   net,
 });
 
@@ -381,8 +572,28 @@ startLoop(
   // they stay identical on every refresh rate.
   (dt) => {
     if (currentMode === 'play' && running) {
-      updatePlayer(player, input, dt, followCam.yaw);
+      // Order matters. Platforms move, we ask what the one under the player
+      // travelled, and the player's controller applies it together with their
+      // own movement in a single resolved step. The carry is deliberately not
+      // applied to the body first: the controller reads the collider's position,
+      // which a setTranslation does not update until the next world.step, so
+      // moving the player up front makes it resolve collisions from a position
+      // the player no longer occupies.
+      dynamics.step(dt);
+      feet.copy(player.currPos);
+      feet.y -= FEET_OFFSET;
+      const { launch } = dynamics.carry(feet, carryDelta);
+      if (launch !== null && player.grounded && player.velocity.y <= 0.01) {
+        player.velocity.y = launch;
+        player.jumping = false;
+        player.jumpTrigger = 0.25;
+        playBounce();
+      }
+
+      updatePlayer(player, input, dt, followCam.yaw, carryDelta);
       physics.world.step();
+
+      updateFootsteps(Math.hypot(player.velocity.x, player.velocity.z), player.grounded, dt);
 
       // Read height from the simulation, not the interpolated visual: a
       // respawn must trigger on where the player actually is.
@@ -397,10 +608,15 @@ startLoop(
       // killY is a world coordinate, so it is compared against the body rather
       // than the height shown to the player.
       if (player.currPos.y < levelHandle.level.killY) {
+        // Splash before the respawn moves them, or it fires at the spawn point.
+        // Kept because this fires once per run, on the one moment that is
+        // unambiguously worth marking — not on every landing.
+        particles.burst(player.currPos, 1.9, 'splash');
         commitRun();
         runMaxHeight = 0;
         hasLanded = false;
         respawnPlayer(player, levelHandle.level.spawn.pos, levelHandle.level.spawn.yaw);
+        faceSpawn();
         hud.flashRespawn();
         playWindBurst();
       }
@@ -415,6 +631,19 @@ startLoop(
       if (running) {
         renderPlayer(player, alpha, frameDt);
         followCam.update(input, player.visualRoot.position);
+
+        // Landings deliberately produce no camera or particle response; see
+        // game/feel.ts for why there is no honest threshold for one here.
+        player.landImpact = 0;
+        player.launched = false;
+        feel.update(
+          frameDt,
+          Math.hypot(player.velocity.x, player.velocity.z),
+          player.velocity.y,
+          player.grounded,
+        );
+        feel.apply(camera);
+
         focusShadow(sun, player.visualRoot.position);
         // Reported from the interpolated visual rather than the simulation, so
         // what other people see matches what this player sees of themselves.
@@ -454,7 +683,21 @@ startLoop(
       net.connected,
     );
 
+    // Same alpha the player is drawn with. Draw the platforms at the simulation
+    // position while the player is interpolated and, above 60Hz, the player
+    // visibly shuffles about on a platform they are standing still on.
+    dynamics.render(alpha);
+    // Aim the light shafts at whichever camera is actually drawing, so they
+    // stay correct in the editor's fly cam as well as in play.
+    postFx.aimGodRays(editor?.activeCamera ?? camera, sunDirection);
     updateSky(frameDt);
+    // Wind runs off accumulated wall-clock rather than the fixed step: it is
+    // presentation only, and pausing it with the simulation would freeze the
+    // whole forest solid behind the start screen.
+    windClock += frameDt;
+    vegetation?.update(windClock);
+    water?.update(windClock);
+    particles.update(windClock, camera.position);
     // Resolution follows the frame budget. Fed the real frame interval, not the
     // fixed step, since dropped frames are exactly what it looks for.
     postFx.tune(frameDt * 1000);

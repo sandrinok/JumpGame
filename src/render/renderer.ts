@@ -15,7 +15,18 @@ export function createRenderer(container: HTMLElement, quality: QualitySettings)
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // three 0.185 deprecated PCFSoftShadowMap and silently falls back to hard
+  // PCF, so asking for it is a no-op that looks like a setting. VSM keeps genuinely
+  // soft edges, which is what dappled light through a canopy needs — the
+  // shadow of a leaf has no business having a crisp border.
+  //
+  // It is also the one shadow setting with a real per-frame cost rather than a
+  // per-allocation one: VSM blurs its map in two extra fullscreen passes, and
+  // the light here follows the player, so the map is rebuilt and reblurred
+  // every single frame. The lower tiers take hard PCF instead — the shadow
+  // under the player's feet, which is what a landing is judged by, is still
+  // there; it just has a crisp edge.
+  renderer.shadowMap.type = quality.softShadows ? THREE.VSMShadowMap : THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   // The sky is a physical-scattering shader emitting true HDR radiance, which
   // is far brighter than the flat colour it replaced. Exposure is the master

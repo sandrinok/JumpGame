@@ -68,6 +68,11 @@ the editor. The server warns about this at startup.
 Reads fall back to the copy inside `dist/` until the first save, so a fresh
 install serves the level shipped with the build without any manual copying.
 
+The editor's level browser (`GET /api/levels`) lists both directories, with
+`LEVELS_DIR` shadowing same-named files in the build — the same order reads
+resolve in, so the list shows the file the game would actually load. The listing
+is public, like the levels themselves; only writing needs a session.
+
 ### The shared world needs a WebSocket through your proxy
 
 Players see each other over a WebSocket at `/ws`. nginx does not forward the

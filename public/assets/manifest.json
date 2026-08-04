@@ -3292,6 +3292,72 @@
       "tags": [
         "imported"
       ]
+    },
+    {
+      "id": "generated_column_broken",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/generated_column_broken.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "generated_idol_head",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/generated_idol_head.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "generated_rubble_pile",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/generated_rubble_pile.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "generated_ruined_arch",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/generated_ruined_arch.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "generated_slab_broken_a",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/generated_slab_broken_a.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
+    },
+    {
+      "id": "generated_slab_broken_b",
+      "asset": {
+        "kind": "gltf",
+        "url": "/assets/3d/generated_slab_broken_b.glb",
+        "collider": "trimesh"
+      },
+      "tags": [
+        "imported"
+      ]
     }
   ]
 }

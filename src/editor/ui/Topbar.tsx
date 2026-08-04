@@ -133,6 +133,15 @@ export function Topbar(): JSX.Element {
               Assets panel
             </MenubarCheckboxItem>
             <MenubarCheckboxItem
+              checked={!ui.levelsCollapsed}
+              onSelect={(e) => {
+                e.preventDefault();
+                uiStore.set({ levelsCollapsed: !ui.levelsCollapsed });
+              }}
+            >
+              Levels panel
+            </MenubarCheckboxItem>
+            <MenubarCheckboxItem
               checked={!ui.outlinerCollapsed}
               onSelect={(e) => {
                 e.preventDefault();

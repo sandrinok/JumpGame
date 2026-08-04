@@ -1,5 +1,22 @@
 export type Vec3 = [number, number, number];
 
+/**
+ * What a placement *does*, beyond sitting there.
+ *
+ * Absent means static, so every level authored before this existed still loads
+ * and behaves identically.
+ */
+export type PlacementKind = 'moving' | 'crumbling' | 'bounce' | 'rotating';
+
+export interface PlacementMotion {
+  /** World-space offset from `pos` at the far end of the travel. */
+  to: Vec3;
+  /** Seconds for one full there-and-back cycle. */
+  period: number;
+  /** 0..1 offset into the cycle, so a row of platforms is not in lockstep. */
+  phase?: number;
+}
+
 export interface Placement {
   /** asset id from registry */
   id: string;
@@ -9,6 +26,16 @@ export interface Placement {
   /** Euler XYZ in radians */
   rot: Vec3;
   scale: Vec3;
+  /** Behaviour. Omitted for ordinary static geometry. */
+  kind?: PlacementKind;
+  /** For 'moving': where and how fast. */
+  motion?: PlacementMotion;
+  /** For 'rotating': radians per second about Y. */
+  spin?: number;
+  /** For 'crumbling': seconds of contact before it gives way. */
+  fuse?: number;
+  /** For 'bounce': launch speed in m/s, replacing the player's jump velocity. */
+  launch?: number;
 }
 
 export interface ColliderParams {

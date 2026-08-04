@@ -38,8 +38,34 @@ export interface DevSubjects {
   /** The live level and asset registry, for stress-testing placement cost. */
   level: unknown;
   registry: unknown;
+  /**
+   * The moving/crumbling/bouncing/rotating platforms.
+   *
+   * Exposed because they are the one system with no visible state: when the
+   * carry is wrong the platform still animates and the player still stands, and
+   * the only way to tell is to read what `carry()` is actually reporting.
+   *
+   *   __jg.dynamics.carry(feetVec3, outVec3)
+   */
+  dynamics: unknown;
   /** The shared-world connection, for checking whether it is actually up. */
   net: unknown;
+  /**
+   * Stand the player on the foothold nearest a given height.
+   *
+   * Verifying a 183m climb by playing it from the bottom every time is not
+   * verification, it is endurance.
+   *
+   *   __jg.warp(120)
+   */
+  warp(height: number): { y: number; from: string } | null;
+  /**
+   * World units per texture repeat on the ruin surfaces, live.
+   *
+   *   __jg.ruinScale(60)        // both
+   *   __jg.ruinScale(60, 45)    // concrete, moss
+   */
+  ruinScale(concrete: number, moss?: number): void;
 }
 
 export interface DevHandles extends DevSubjects {

@@ -53,7 +53,14 @@ export function createOnlinePanel(parent: HTMLElement): OnlinePanel {
         ...others.map((o) => ({ name: o.name, colour: o.colour, height: o.h, isSelf: false })),
       ].sort((a, b) => b.height - a.height);
 
-      const next = `${connected}|${rows.map((r) => `${r.name}:${r.height}:${r.colour}`).join('|')}`;
+      // Compared at the precision the panel actually shows. Comparing the raw
+      // float meant the local player's row — a live physics position — differed
+      // from the last frame's on every frame they were moving, so the entire
+      // list was torn down and rebuilt at the display's refresh rate to redraw
+      // a picture that was character-for-character identical.
+      const next = `${connected}|${rows
+        .map((r) => `${r.name}:${r.height.toFixed(1)}:${r.colour}`)
+        .join('|')}`;
       if (next === signature) return;
       signature = next;
 
