@@ -435,7 +435,7 @@ server.on('upgrade', (req, socket) => {
 
 setInterval(() => {
   sweepRateLimit();
-  scores.sweep();
+  boards.sweep();
 }, 5 * 60 * 1000).unref();
 
 server.on('error', (err) => {
